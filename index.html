@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>我的智能记账本</title>
+<meta name="theme-color" content="#0e1014">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#0e1014;--fg:#eceef2;--mut:#8b93a1;--card:#1a1d23;--card2:#22262e;--line:#2c313a;--acc:#58b98c;--accfg:#0d1f17;--in:#6fd08f;--out:#ff6b6b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:760px;margin:0 auto;padding:10px 14px calc(88px + env(safe-area-inset-bottom,0px))}
+h1{font-size:26px;margin:8px 2px 14px;color:#fff;letter-spacing:.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font-size:16px}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.btn{padding:10px 14px;border:1px solid var(--acc);background:var(--acc);color:var(--accfg);border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.btn.sec{background:transparent;color:var(--acc)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.st{font-size:12px;color:var(--mut);margin:4px 4px 0}
+.bal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bal div{background:rgba(255,255,255,.06);border-radius:10px;padding:8px;text-align:center}
+.bal b{display:block;font-size:17px}
+.in{color:var(--in)}.out{color:var(--out)}
+[hidden]{display:none!important}
+.tabbar{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.tabbar button{position:relative;transition:transform .15s}
+.tabbar button.drag{transition:none;z-index:5;transform:scale(1.12);background:rgba(255,255,255,.1);border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.topr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:30;display:flex;align-items:center;gap:8px;pointer-events:none}
+.wm{font-size:12px;letter-spacing:.5px;color:rgba(255,255,255,.28);white-space:nowrap}
+.sync{pointer-events:auto;border:1px solid var(--line);background:rgba(26,29,35,.92);color:var(--fg);border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer}
+.syline{white-space:pre-line;font-size:13px;color:var(--mut);margin:0 0 8px}
+.crow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.crow:first-of-type{border-top:0}
+.crow .nm{flex:1;min-width:0;font-weight:600}
+.crow small{color:var(--mut);font-weight:400;margin-left:6px}
+.sech{font-size:13px;color:var(--mut);margin:14px 4px 6px}
+/* bottom tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;background:rgba(18,20,25,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));z-index:20}
+.tabbar button{flex:1;border:0;background:none;color:var(--mut);padding:6px 0 4px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.tabbar button span{font-size:21px;line-height:1}
+.tabbar button[aria-selected="true"]{color:var(--acc);font-weight:600}
+/* history */
+.search{position:relative;margin-bottom:10px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--mut);fill:none;stroke-width:2;stroke-linecap:round}
+.search input{padding-left:36px;background:var(--card);border-radius:12px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:13px;cursor:pointer}
+.chip.on{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
+details.more{margin-bottom:10px}
+details.more summary{font-size:13px;color:var(--acc);cursor:pointer;padding:2px 2px 8px;list-style:none}
+details.more summary::-webkit-details-marker{display:none}
+.sumline{font-size:13px;color:var(--mut);margin:2px 2px 12px}
+.gh{display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 6px;font-size:14px;font-weight:700;color:#fff}
+.gh .gt{font-size:13px;font-weight:700}.gh .gt i{font-style:normal;margin-left:8px}
+.grp{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.li{padding:11px 12px;border-top:1px solid var(--line);cursor:pointer}
+.li:first-child{border-top:0}
+.lm{display:flex;align-items:center;gap:11px}
+.ic{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+.lt{flex:1;min-width:0}.lt b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt small{color:var(--mut);font-size:12px}
+.amt{font-weight:700;font-size:15px;white-space:nowrap}.amt.tr{color:var(--mut)}
+.act{display:none;gap:8px;margin:9px 0 0 49px}.li.open .act{display:flex}
+.empty{color:var(--mut);text-align:center;padding:36px 0}
+/* stats */
+.seg{display:flex;gap:8px;margin-bottom:10px}
+.seg button{flex:1;padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:15px;cursor:pointer}
+.seg button.on{background:#22344f;color:#fff;border-color:#35507a;font-weight:600}
+.pnav{display:flex;align-items:center;justify-content:center;gap:18px;margin:2px 0 12px;font-size:15px;color:var(--fg)}
+.pnav button{border:1px solid var(--line);background:var(--card);color:var(--fg);width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer}
+.hero{border-radius:18px;padding:16px 18px;margin-bottom:12px;background:linear-gradient(135deg,#12403f 0%,#1f2d57 62%,#3a1f4c 100%);border:1px solid rgba(255,255,255,.08)}
+.hero .hl{font-size:13px;color:rgba(255,255,255,.72);display:flex;justify-content:space-between;align-items:center}
+.pill{font-size:12px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.14);color:#fff}
+.hero .big{font-size:34px;font-weight:800;margin:6px 0 4px;color:#fff;letter-spacing:.3px}
+.hero .mini{font-size:12px;color:rgba(255,255,255,.72)}
+.ch{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.ch b{font-size:15px}.ch span{font-size:12px;color:var(--mut)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:170px}
+.bc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bv{font-size:10px;color:var(--mut);margin-bottom:4px;white-space:nowrap}
+.bb{width:min(100%,34px);border-radius:8px;background:linear-gradient(180deg,#5b9bff,#2f5fd6)}
+.bb.z{background:#3b5db0;opacity:.55}
+.bl{font-size:11px;color:var(--mut);margin-top:6px;white-space:nowrap}
+.dr{padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.dr:first-of-type{border-top:0}
+.dh{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.dh .ic{width:30px;height:30px;font-size:15px}
+.dh .nm{flex:1}.dh .pc{font-size:12px;color:var(--mut)}
+.dbar{height:8px;border-radius:99px;background:var(--card2);overflow:hidden}
+.dbar i{display:block;height:100%;border-radius:99px}
+</style>
+</head>
+<body>
+<div class="topr"><span class="wm">杨yeong</span><button id="syncchip" class="sync" type="button">☁️ 未连接</button></div>
+<main>
+<h1 id="ttl">记账</h1>
+
+<section id="p-add">
+<div class="card" style="background:linear-gradient(135deg,#162438 0%,#1e112a 100%);border:1px solid rgba(255,255,255,0.08);">
+  <div style="font-size:13px;color:rgba(255,255,255,0.7);">当前总资产余额</div>
+  <div id="top-total-bal" style="font-size:28px;font-weight:800;margin:6px 0 14px;color:#fff;">RM 0.00</div>
+  <div class="bal" id="top-account-bal"></div>
+</div>
+<div class="card">
+<div class="row"><div><label>日期</label><input id="fd" type="date"></div>
+<div id="catbox"><label>分类</label><select id="fc"></select></div></div>
+<label>详细</label><input id="fn" placeholder="例如：羽毛球">
+<div class="row"><div><label>收入 / 支出</label><select id="ft"><option value="out">支出</option><option value="in">收入</option><option value="tr">转账</option></select></div>
+<div><label id="falbl">账户</label><select id="fa"><option value="cash">cash</option><option value="tng">tng</option><option value="rhb">rhb</option></select></div>
+<div><label>金额</label><input id="fm" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div></div>
+<div id="trbox" hidden><label>转入账户（钱转到哪里）</label><select id="fa2"><option value="cash">cash</option><option value="tng" selected>tng</option><option value="rhb">rhb</option></select><div class="st">选“转账”后，只要记一次，会自动一笔转出、一笔转入，分类固定为“转账”，不计入收入和支出。</div></div>
+<div class="row" style="margin-top:12px"><button class="btn" id="save">添加</button><button class="btn sec" id="cancel" hidden>取消修改</button></div>
+<div class="st" id="msg"></div>
+</div>
+</section>
+
+<section id="p-stats" hidden>
+<div class="seg"><button data-sm="m" class="on">月</button><button data-sm="y">年</button></div>
+<div class="pnav"><button data-sp="-1" aria-label="上一期">‹</button><span id="plabel"></span><button data-sp="1" aria-label="下一期">›</button></div>
+<div id="stbody"></div>
+</section>
+
+<section id="p-list" hidden>
+<div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="lq" type="search" placeholder="搜索标题、分类、金额"></div>
+<div class="chips" id="cchips"></div>
+<details class="more"><summary>更多筛选（日期、收入/支出）</summary>
+<div class="card" style="margin-bottom:0">
+<div class="row"><div><label>从</label><input id="lf" type="date"></div><div><label>到</label><input id="lt" type="date"></div></div>
+<label>类型</label><select id="ly"><option value="">全部</option><option value="out">支出</option><option value="in">收入</option></select>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="btn sm sec" data-r="m">本月</button><button class="btn sm sec" data-r="p">上月</button><button class="btn sm sec" data-r="a">全部日期</button><button class="btn sm sec" id="clr">清除全部筛选</button></div>
+</div></details>
+<div class="sumline" id="lsum"></div>
+<div id="lst"></div>
+</section>
+
+<section id="p-settings" hidden>
+<div class="sech">分类管理</div>
+<div class="card" id="catlist"></div>
+<div class="card">
+<div class="row"><div style="flex:0 0 76px"><label>图标</label><input id="nci" placeholder="🏷️" maxlength="4"></div>
+<div><label>新分类名称</label><input id="ncn" placeholder="例如：游戏充值"></div></div>
+<div class="row" style="margin-top:12px"><button class="btn" id="addcat">添加分类</button></div>
+<div class="st" id="catmsg"></div>
+</div>
+<div class="sech">云端同步（Google Drive）</div>
+<div class="card">
+<div class="syline" id="syline"></div>
+<label>Google 客户端 ID</label><input id="cid" placeholder="xxxx.apps.googleusercontent.com" autocapitalize="off" autocomplete="off" spellcheck="false">
+<div class="row" style="margin-top:12px"><button class="btn" id="sycon">连接并同步</button><button class="btn sec" id="sysync">立即同步</button></div>
+<div class="row" style="margin-top:8px"><button class="btn sec" id="sydis">断开连接</button></div>
+<div class="st">账本会存成你 Drive 里的“记账本数据.json”。离线照常记账，联网后点右上角的云朵同步。</div>
+</div>
+<div class="sech">数据管理</div>
+<div class="card">
+<div class="crow"><div class="ic" style="background:#a78bfa2e">💾</div><div class="nm">备份 / 恢复<small>JSON</small></div><button class="btn sm sec" id="expjson">导出</button><button class="btn sm sec" id="impjson">导入</button><input type="file" id="impfile" accept=".json,application/json" hidden></div>
+<div class="crow"><div class="ic" style="background:#fbbf242e">📥</div><div class="nm">导入 CSV<small>从旧版导出的</small></div><button class="btn sm sec" id="impcsvbtn">导入</button><input type="file" id="impcsv" accept=".csv,text/csv" hidden></div>
+<div class="crow"><div class="ic" style="background:#58b98c2e">📤</div><div class="nm">导出 CSV 数据<small id="expn"></small></div><button class="btn sm sec" id="expcsv">导出</button></div>
+</div>
+</section>
+</main>
+
+<nav class="tabbar" role="tablist">
+<button role="tab" data-t="add" aria-selected="true"><span>✏️</span>记账</button>
+<button role="tab" data-t="list" aria-selected="false"><span>🕘</span>明细</button>
+<button role="tab" data-t="stats" aria-selected="false"><span>📊</span>统计</button>
+<button role="tab" data-t="settings" aria-selected="false"><span>⚙️</span>设置</button>
+</nav>
+
+<script>
+(function(){
+var ACC=['cash','tng','rhb'];
+var cats = ['食物', '交通', '娱乐', '运动', '学校/宿舍', '网购', '电脑', '零用', '赞助', '其他', '错误', '转账'];
+var fixedOpen = { cash: 82.45, tng: 0.00, rhb: 0.00 };
+
+
+var rawDataList = [];
+// 2024、2025 全年记录：[日期, 分类, 收入in/支出out, 账户, 金额, 详细, 备注]
+var d24 = [];
+var d25 = [];
+var d26 = [];
+var d26b = [];
+[[d24,'n24_',1704067200000],[d25,'n25_',1735689600000],[d26,'n26_',1767225600000],[d26b,'n26b_',1767826400000]].forEach(function(g){
+  g[0].forEach(function(r,i){
+    rawDataList.push({id:g[1]+i, ts:g[2]+i*1000, d:r[0], c:r[1], t:r[2], a:r[3], m:r[4], n:r[5], k:r[6]});
+  });
+});
+
+var S = { cats: cats, open: fixedOpen, entries: rawDataList };
+var F={from:'',to:'',cat:'',t:'',q:''},editId=null;
+var ST={mode:'m',y:new Date().getFullYear(),m:new Date().getMonth()+1};
+var $=function(s){return document.querySelector(s)};
+function pad(n){return String(n).padStart(2,'0')}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function money(n){return (Math.round(n*100)/100).toFixed(2)}
+function fmt(n){return (Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function amt(n){n=Math.round(n*100)/100;return n%1===0?String(n):n.toFixed(2)}
+function compact(n){return n>=1000?(n/1000).toFixed(1).replace(/\.0$/,'')+'k':String(Math.round(n))}
+function esc(s){var e=document.createElement('div');e.textContent=s==null?'':s;return e.innerHTML}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function allCats(){var s=S.cats.slice();S.entries.forEach(function(e){if(s.indexOf(e.c)<0)s.push(e.c)});return s}
+
+var CS={'食物':['🍜','#ff9f43'],'交通':['🚌','#54a0ff'],'娱乐':['🎬','#a78bfa'],'运动':['🏸','#34d399'],'学校/宿舍':['🏫','#fbbf24'],'网购':['🛍️','#f472b6'],'电脑':['💻','#22d3ee'],'零用':['👛','#2dd4bf'],'赞助':['🎁','#fb7185'],'其他':['📦','#94a3b8'],'转账':['🔁','#64748b'],'错误':['❓','#9ca3af']};
+function cs(c){return (S.cs&&S.cs[c])||CS[c]||['🏷️','#94a3b8']}
+function title(e){return (e.k&&/明细$/.test(e.n))?e.k:(e.n+(e.k?' ('+e.k+')':''))}
+
+function loadLocal(){try{var j=localStorage.getItem('ledger-v14');if(j){var o=JSON.parse(j);if(o&&o.entries)S=o}}catch(e){}}
+function persist(quiet){try{localStorage.setItem('ledger-v14',JSON.stringify(S))}catch(e){}
+  if(!quiet&&typeof markDirty==='function')markDirty()}
+
+function fillSelect(el,val,hideTr){
+  var h='';allCats().forEach(function(c){if(hideTr&&c==='转账'&&c!==val)return;h+='<option>'+esc(c)+'</option>'});
+  el.innerHTML=h;el.value=val||'';if(!val)el.selectedIndex=0;
+}
+
+function renderForm(){
+  var cur=$('#fc').value;fillSelect($('#fc'),cur,true);
+  var b='',totalBal=0;
+  ACC.forEach(function(a){
+    var v=+S.open[a]||0;
+    S.entries.forEach(function(e){if(e.a===a)v+=e.t==='in'?e.m:-e.m});
+    totalBal+=v;
+    b+='<div>'+a+'<b class="'+(v<0?'out':'')+'">'+money(v)+'</b></div>';
+  });
+  $('#top-total-bal').textContent='RM '+fmt(totalBal);
+  $('#top-account-bal').innerHTML=b;
+}
+
+/* ---------- 明细 ---------- */
+function filtered(){
+  var q=F.q.trim().toLowerCase();
+  return S.entries.filter(function(e){
+    if(F.from&&e.d<F.from)return false;if(F.to&&e.d>F.to)return false;
+    if(F.cat&&e.c!==F.cat)return false;if(F.t&&e.t!==F.t)return false;
+    if(q){var txt=(e.n+' '+(e.k||'')+' '+e.c+' '+e.m+' '+e.a).toLowerCase();if(txt.indexOf(q)<0)return false}
+    return true;
+  }).sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:(a.ts<b.ts?1:-1)});
+}
+function dlabel(d){
+  var p=d.split('-'),dt=new Date(+p[0],+p[1]-1,+p[2]),now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  var diff=Math.round((t0-dt)/864e5);
+  var base=(dt.getFullYear()!==now.getFullYear()?dt.getFullYear()+'年':'')+(dt.getMonth()+1)+'月'+dt.getDate()+'日';
+  var pre=diff===0?'今天 · ':diff===1?'昨天 · ':diff===2?'前天 · ':'';
+  return pre+base+(pre?'':' 周'+'日一二三四五六'.charAt(dt.getDay()));
+}
+function renderList(){
+  $('#lf').value=F.from;$('#lt').value=F.to;$('#ly').value=F.t;
+  var ch='<button class="chip'+(F.cat===''?' on':'')+'" data-cat="">全部</button>';
+  allCats().forEach(function(c){ch+='<button class="chip'+(F.cat===c?' on':'')+'" data-cat="'+esc(c)+'">'+cs(c)[0]+' '+esc(c)+'</button>'});
+  $('#cchips').innerHTML=ch;
+  var rows=filtered(),i=0,o=0,tc=0,showT=(F.cat==='转账');
+  rows.forEach(function(e){if(e.c==='转账'){tc++;if(!showT)return}if(e.t==='in')i+=e.m;else o+=e.m});
+  $('#lsum').innerHTML=showT?'共 '+rows.length+' 笔转账 · 转入 +RM '+fmt(i)+' · 转出 −RM '+fmt(o)+'（账户之间的转账，不算收入和支出）':
+    '共 '+rows.length+' 笔'+(tc?'（含 '+tc+' 笔转账，不计入）':'')+' · 收入 <b class="in">+RM '+fmt(i)+'</b> · 支出 <b class="out">−RM '+fmt(o)+'</b>';
+  if(!rows.length){$('#lst').innerHTML='<div class="empty">没有符合条件的记录</div>';return}
+  var html='',cur=null,buf='',di=0,dout=0;
+  function flush(){
+    if(cur===null)return;
+    var t='';if(di)t+='<i class="in">+RM '+fmt(di)+'</i>';if(dout||(!di&&buf.indexOf('转账')<0))t+='<i class="out">−RM '+fmt(dout)+'</i>';else if(!di)t+='<i style="color:var(--mut)">仅转账</i>';
+    html+='<div class="gh"><span>'+dlabel(cur)+'</span><span class="gt">'+t+'</span></div><div class="grp">'+buf+'</div>';
+  }
+  rows.forEach(function(e){
+    if(e.d!==cur){flush();cur=e.d;buf='';di=0;dout=0}
+    var isT=e.c==='转账';
+    if(!isT||showT){if(e.t==='in')di+=e.m;else dout+=e.m}
+    var st=cs(e.c);
+    buf+='<div class="li"><div class="lm"><div class="ic" style="background:'+st[1]+'2e">'+st[0]+'</div>'+
+      '<div class="lt"><b>'+esc(title(e))+'</b><small>'+esc(e.c)+' · '+esc(e.a)+'</small></div>'+
+      '<div class="amt '+(isT&&!showT?'tr':e.t)+'">'+(e.t==='in'?'+':'−')+amt(e.m)+'</div></div>'+
+      '<div class="act"><button class="btn sm sec" data-e="'+e.id+'">修改</button><button class="btn sm sec" data-x="'+e.id+'">删除</button></div></div>';
+  });
+  flush();
+  $('#lst').innerHTML=html;
+}
+
+/* ---------- 统计 ---------- */
+function renderStats(){
+  var m=ST.mode==='m',pre=m?ST.y+'-'+pad(ST.m):''+ST.y;
+  var py=ST.y,pm=ST.m-1;if(pm<1){pm=12;py--}
+  var ppre=m?py+'-'+pad(pm):''+(ST.y-1);
+  $('#plabel').textContent=m?ST.y+'年'+ST.m+'月':ST.y+'年';
+  document.querySelectorAll('[data-sm]').forEach(function(b){b.classList.toggle('on',b.dataset.sm===ST.mode)});
+  var nb=m?Math.ceil(new Date(ST.y,ST.m,0).getDate()/7):12,bars=[],labels=[],k;
+  for(k=0;k<nb;k++){bars.push(0);labels.push(m?'第'+(k+1)+'周':(k+1)+'月')}
+  var out=0,inc=0,pout=0,by={};
+  S.entries.forEach(function(e){
+    if(e.c==='转账')return;
+    if(e.d.indexOf(pre)===0){
+      if(e.t==='out'){out+=e.m;by[e.c]=(by[e.c]||0)+e.m;bars[m?Math.floor((+e.d.slice(8,10)-1)/7):(+e.d.slice(5,7)-1)]+=e.m}
+      else inc+=e.m;
+    }else if(e.t==='out'&&e.d.indexOf(ppre)===0)pout+=e.m;
+  });
+  var pill=pout>0?(out>=pout?'↗ ':'↘ ')+Math.abs(Math.round((out-pout)/pout*100))+'% 较'+(m?'上月':'去年'):'上期无支出';
+  var h='<div class="hero"><div class="hl"><span>'+(m?ST.m+'月':ST.y+'年')+'总支出</span><span class="pill">'+pill+'</span></div>'+
+    '<div class="big">RM '+fmt(out)+'</div><div class="mini">收入 +RM '+fmt(inc)+' · 结余 '+(inc-out<0?'−':'')+'RM '+fmt(Math.abs(inc-out))+'</div></div>';
+  var mx=Math.max.apply(null,bars.concat([1]));
+  h+='<div class="card"><div class="ch"><b>趋势图</b><span>'+(m?'按周汇总':'按月汇总')+'（RM）</span></div><div class="bars">';
+  bars.forEach(function(v,i){
+    h+='<div class="bc"><div class="bv">'+(v?compact(v):'0')+'</div><div class="bb'+(v?'':' z')+'" style="height:'+(v?Math.max(8,Math.round(v/mx*110)):6)+'px"></div><div class="bl">'+labels[i]+'</div></div>';
+  });
+  h+='</div></div>';
+  var list=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
+  h+='<div class="card"><div class="ch"><b>分布图</b><span>分类从高到低 · 点一下看明细</span></div>';
+  if(!list.length)h+='<div class="empty" style="padding:20px 0">这段时间还没有支出记录</div>';
+  list.forEach(function(c){
+    var st=cs(c),w=Math.max(2,Math.round(by[c]/by[list[0]]*100));
+    h+='<div class="dr" data-dc="'+esc(c)+'"><div class="dh"><div class="ic" style="background:'+st[1]+'2e">'+st[0]+'</div><span class="nm">'+esc(c)+'</span><span class="pc">'+Math.round(by[c]/out*100)+'%</span><b>RM '+fmt(by[c])+'</b></div><div class="dbar"><i style="width:'+w+'%;background:'+st[1]+'"></i></div></div>';
+  });
+  h+='</div>';
+  $('#stbody').innerHTML=h;
+}
+function initStats(){
+  var mx='';S.entries.forEach(function(e){if(e.d>mx)mx=e.d});
+  if(mx){ST.y=+mx.slice(0,4);ST.m=+mx.slice(5,7)}
+}
+
+/* ---------- 设置：分类管理 + 导出 ---------- */
+var PAL=['#ff9f43','#54a0ff','#a78bfa','#34d399','#fbbf24','#f472b6','#22d3ee','#2dd4bf','#fb7185','#94a3b8'];
+function catCount(c){var n=0;S.entries.forEach(function(e){if(e.c===c)n++});return n}
+function renderSettings(){
+  var h='';
+  allCats().forEach(function(c){
+    var st=cs(c),n=catCount(c),lock=(c==='转账');
+    h+='<div class="crow"><div class="ic" style="background:'+st[1]+'2e">'+st[0]+'</div><div class="nm">'+esc(c)+'<small>'+n+' 笔</small></div>'+
+      (lock?'<small style="color:var(--mut)">系统分类</small>':'<button class="btn sm sec" data-ce="'+esc(c)+'">编辑</button><button class="btn sm sec" data-cd="'+esc(c)+'">删除</button>')+'</div>';
+  });
+  $('#catlist').innerHTML=h;
+  $('#expn').textContent=S.entries.length+' 笔';
+  renderSyncUI();
+}
+function addCat(){
+  var n=$('#ncn').value.trim(),ic=$('#nci').value.trim()||'🏷️',m=$('#catmsg');
+  if(!n){m.textContent='请输入分类名称';return}
+  if(allCats().indexOf(n)>=0){m.textContent='已经有这个分类了';return}
+  S.cats.push(n);S.cs=S.cs||{};S.cs[n]=[ic,PAL[allCats().length%PAL.length]];
+  $('#ncn').value='';$('#nci').value='';S.catsU=Date.now();persist();renderAll();renderSettings();m.textContent='已添加：'+n;
+}
+function editCat(old){
+  var n=prompt('分类名称',old);if(n===null)return;n=n.trim();if(!n)return;
+  var st=cs(old),ic=prompt('图标（一个 emoji）',st[0]);if(ic===null)ic=st[0];ic=ic.trim()||st[0];
+  if(n!==old){
+    if(allCats().indexOf(n)>=0){alert('已经有这个分类了');return}
+    S.cats=S.cats.map(function(x){return x===old?n:x});if(S.cats.indexOf(n)<0)S.cats.push(n);
+    S.entries.forEach(function(e){if(e.c===old){e.c=n;e.u=Date.now()}});
+    if(S.cs&&S.cs[old])delete S.cs[old];
+    if(F.cat===old)F.cat=n;
+  }
+  S.cs=S.cs||{};S.cs[n]=[ic,st[1]];S.catsU=Date.now();
+  persist();renderAll();renderSettings();
+}
+function delCat(c){
+  var n=catCount(c);
+  if(n>0){alert('「'+c+'」还有 '+n+' 笔记录在用，不能删除。\n请先把那些记录改到别的分类，或者用“编辑”改名。');return}
+  if(!confirm('确定删除分类「'+c+'」？'))return;
+  S.cats=S.cats.filter(function(x){return x!==c});if(S.cs)delete S.cs[c];
+  if(F.cat===c)F.cat='';S.catsU=Date.now();
+  persist();renderAll();renderSettings();
+}
+function csvCell(v){v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function exportCSV(){
+  var rows=[['日期','分类','收支','账户','金额','详细','备注']];
+  S.entries.slice().sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:(a.ts<b.ts?-1:1)}).forEach(function(e){
+    rows.push([e.d,e.c,e.t==='in'?'收入':'支出',e.a,e.m,e.n,e.k||'']);
+  });
+  var txt='\ufeff'+rows.map(function(r){return r.map(csvCell).join(',')}).join('\r\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));
+  a.download='开销记录_'+ymd(new Date())+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+
+/* ---------- 底部标签：长按拖动排序 ---------- */
+var DEF_TABS=['add','list','stats','settings'];
+function tabOrder(){
+  var o=(S.tabOrder||[]).filter(function(x){return DEF_TABS.indexOf(x)>=0});
+  DEF_TABS.forEach(function(x){if(o.indexOf(x)<0)o.push(x)});return o;
+}
+function applyTabOrder(){
+  var bar=$('.tabbar');
+  tabOrder().forEach(function(t){bar.appendChild(bar.querySelector('[data-t="'+t+'"]'))});
+}
+function saveTabOrder(){
+  S.tabOrder=[].map.call(document.querySelectorAll('.tabbar button'),function(b){return b.dataset.t});persist();
+}
+var dragBtn=null,dragTimer=null,dragId=null,sx=0,sy=0,suppress=false;
+(function(){
+  var bar=$('.tabbar');
+  function place(x){
+    dragBtn.style.transform='none';
+    var r=dragBtn.getBoundingClientRect();
+    dragBtn.style.transform='translateX('+(x-(r.left+r.width/2))+'px) scale(1.12)';
+  }
+  bar.addEventListener('pointerdown',function(ev){
+    var b=ev.target.closest('button');if(!b)return;
+    sx=ev.clientX;sy=ev.clientY;dragId=ev.pointerId;
+    clearTimeout(dragTimer);
+    dragTimer=setTimeout(function(){
+      dragBtn=b;b.classList.add('drag');
+      try{bar.setPointerCapture(dragId)}catch(e){}
+      if(navigator.vibrate)navigator.vibrate(15);
+      place(sx);
+    },350);
+  });
+  bar.addEventListener('pointermove',function(ev){
+    if(!dragBtn){
+      if(dragTimer&&(Math.abs(ev.clientX-sx)>10||Math.abs(ev.clientY-sy)>10)){clearTimeout(dragTimer);dragTimer=null}
+      return;
+    }
+    ev.preventDefault();
+    var x=ev.clientX,btns=[].slice.call(bar.querySelectorAll('button'));
+    for(var i=0;i<btns.length;i++){
+      var o=btns[i];if(o===dragBtn)continue;
+      var r=o.getBoundingClientRect();
+      if(x>r.left&&x<r.right){
+        var di=btns.indexOf(dragBtn);
+        if(di<i)bar.insertBefore(dragBtn,o.nextSibling);else bar.insertBefore(dragBtn,o);
+        break;
+      }
+    }
+    place(x);
+  });
+  function end(){
+    clearTimeout(dragTimer);dragTimer=null;
+    if(dragBtn){
+      dragBtn.classList.remove('drag');dragBtn.style.transform='';
+      dragBtn=null;suppress=true;setTimeout(function(){suppress=false},80);
+      saveTabOrder();
+    }
+  }
+  bar.addEventListener('pointerup',end);
+  bar.addEventListener('pointercancel',end);
+  bar.addEventListener('contextmenu',function(e){e.preventDefault()});
+})();
+
+function renderAll(){renderForm();renderList();renderStats()}
+var TITLES={add:'记账',stats:'统计',list:'明细',settings:'设置'};
+function tab(t){
+  ['add','stats','list','settings'].forEach(function(x){$('#p-'+x).hidden=x!==t});
+  document.querySelectorAll('.tabbar button').forEach(function(b){b.setAttribute('aria-selected',b.dataset.t===t)});
+  $('#ttl').textContent=TITLES[t];
+  if(t==='list')renderList();if(t==='stats')renderStats();if(t==='add')renderForm();if(t==='settings')renderSettings();
+  window.scrollTo(0,0);
+}
+function trMode(){
+  var on=$('#ft').value==='tr';
+  $('#catbox').hidden=on;$('#trbox').hidden=!on;
+  $('#falbl').textContent=on?'转出账户':'账户';
+}
+function resetForm(){editId=null;$('#fn').value='';$('#fm').value='';$('#save').textContent='添加';$('#cancel').hidden=true}
+function save(){
+  var m=parseFloat($('#fm').value);
+  if(!$('#fd').value||!(m>0)){$('#msg').textContent='请填写日期和大于 0 的金额';return}
+  if($('#ft').value==='tr'){
+    if(editId){$('#msg').textContent='修改已有记录时不能选“转账”，请先取消修改';return}
+    var from=$('#fa').value,to=$('#fa2').value;
+    if(from===to){$('#msg').textContent='转出和转入不能是同一个账户';return}
+    var g=uid(),now=Date.now(),mm=Math.round(m*100)/100,nn=$('#fn').value.trim()||('转账 '+from+'→'+to);
+    S.entries.push({id:g+'o',ts:now,u:now,d:$('#fd').value,c:'转账',n:nn,t:'out',a:from,m:mm,k:'',g:g});
+    S.entries.push({id:g+'i',ts:now+1,u:now,d:$('#fd').value,c:'转账',n:nn,t:'in',a:to,m:mm,k:'',g:g});
+    resetForm();persist();renderAll();
+    $('#msg').textContent='已转账：'+from+' → '+to+' RM '+money(mm);return;
+  }
+  var e={id:editId||uid(),ts:Date.now(),u:Date.now(),d:$('#fd').value,c:$('#fc').value,n:$('#fn').value.trim(),
+    t:$('#ft').value,a:$('#fa').value,m:Math.round(m*100)/100,k:''};
+  if(editId){S.entries=S.entries.map(function(x){if(x.id===editId){e.ts=x.ts;return e}return x})}
+  else S.entries.push(e);
+  var was=editId;resetForm();persist();renderAll();
+  $('#msg').textContent=(was?'已修改：':'已添加：')+e.c+' '+(e.t==='in'?'+':'−')+'RM '+money(e.m);
+}
+function range(r){
+  var n=new Date(),a,b;
+  if(r==='m'){a=new Date(n.getFullYear(),n.getMonth(),1);b=new Date(n.getFullYear(),n.getMonth()+1,0)}
+  else if(r==='p'){a=new Date(n.getFullYear(),n.getMonth()-1,1);b=new Date(n.getFullYear(),n.getMonth(),0)}
+  F.from=a?ymd(a):'';F.to=b?ymd(b):'';renderList();
+}
+
+document.addEventListener('click',function(ev){
+  var t=ev.target,el;
+  if(t.closest('#syncchip')){if(SY.cid&&SY.connected)sync(true);else tab('settings');return}
+  if(t.closest('#sycon')){var cv=$('#cid').value.trim();if(!cv){syMsg='请先粘贴 Google 客户端 ID';renderSyncUI();return}
+    if(cv!==SY.cid){SY.cid=cv;tokClient=null;TOK=null;SY.connected=false;SY.fileId=''}saveSY();sync(true);return}
+  if(t.closest('#sysync')){if(!SY.cid){syMsg='请先粘贴客户端 ID，再点“连接并同步”';renderSyncUI()}else sync(true);return}
+  if(t.closest('#sydis')){disconnect();return}
+  if(t.closest('#expjson'))return exportJSON();
+  if(t.closest('#impjson'))return $('#impfile').click();
+  if(t.closest('#impcsvbtn'))return $('#impcsv').click();
+  if(suppress&&t.closest('.tabbar'))return;
+  if(t.closest('#rstab')){S.tabOrder=DEF_TABS.slice();persist();applyTabOrder();return}
+  if((el=t.closest('.tabbar button')))return tab(el.dataset.t);
+  if((el=t.closest('[data-ce]')))return editCat(el.dataset.ce);
+  if((el=t.closest('[data-cd]')))return delCat(el.dataset.cd);
+  if(t.closest('#addcat'))return addCat();
+  if(t.closest('#expcsv'))return exportCSV();
+  if((el=t.closest('[data-r]')))return range(el.dataset.r);
+  if((el=t.closest('[data-cat]'))){F.cat=el.dataset.cat;return renderList()}
+  if((el=t.closest('[data-sm]'))){ST.mode=el.dataset.sm;return renderStats()}
+  if((el=t.closest('[data-sp]'))){
+    var d=+el.dataset.sp;
+    if(ST.mode==='m'){ST.m+=d;if(ST.m>12){ST.m=1;ST.y++}if(ST.m<1){ST.m=12;ST.y--}}else ST.y+=d;
+    return renderStats();
+  }
+  if((el=t.closest('[data-dc]'))){
+    var y=ST.y,mo=ST.m;
+    F={from:ST.mode==='m'?y+'-'+pad(mo)+'-01':y+'-01-01',to:ST.mode==='m'?ymd(new Date(y,mo,0)):y+'-12-31',cat:el.dataset.dc,t:'out',q:''};
+    $('#lq').value='';tab('list');return;
+  }
+  if((el=t.closest('[data-e]'))){
+    var e=S.entries.filter(function(x){return x.id===el.dataset.e})[0];if(!e)return;
+    editId=e.id;tab('add');renderForm();
+    $('#fd').value=e.d;if(e.c==='转账'){var op=document.createElement('option');op.textContent='转账';$('#fc').appendChild(op)}$('#fc').value=e.c;$('#fn').value=title(e);$('#ft').value=e.t;$('#fa').value=e.a;$('#fm').value=e.m;trMode();
+    $('#save').textContent='保存修改';$('#cancel').hidden=false;$('#msg').textContent='';return;
+  }
+  if((el=t.closest('[data-x]'))){
+    var me=S.entries.filter(function(x){return x.id===el.dataset.x})[0];
+    var gid=me&&me.g;
+    if(confirm(gid?'这是一笔转账的其中一边，会把转出和转入两笔一起删除，确定？':'确定删除这一笔？')){var rm=S.entries.filter(function(x){return gid?x.g===gid:x.id===el.dataset.x});S.del=S.del||{};rm.forEach(function(x){S.del[x.id]=Date.now()});S.entries=S.entries.filter(function(x){return gid?x.g!==gid:x.id!==el.dataset.x});persist();renderAll()}return;
+  }
+  if(t.closest('#clr')){F={from:'',to:'',cat:'',t:'',q:''};$('#lq').value='';return renderList()}
+  if((el=t.closest('.li')))el.classList.toggle('open');
+});
+
+$('#save').onclick=save;
+$('#ft').onchange=trMode;
+$('#cancel').onclick=function(){resetForm();$('#msg').textContent=''};
+$('#lf').onchange=function(){F.from=this.value;renderList()};
+$('#lt').onchange=function(){F.to=this.value;renderList()};
+$('#ly').onchange=function(){F.t=this.value;renderList()};
+$('#lq').oninput=function(){F.q=this.value;renderList()};
+
+/* ---------- Google Drive 同步（离线优先） ---------- */
+var SYK='ledger-sync',FILENAME='记账本数据.json',SCOPE='https://www.googleapis.com/auth/drive.file';
+var SY={cid:'',fileId:'',connected:false,dirty:false,last:0,ver:0};
+try{var _sy=JSON.parse(localStorage.getItem(SYK)||'null');if(_sy)for(var _k in _sy)SY[_k]=_sy[_k]}catch(e){}
+function saveSY(){try{localStorage.setItem(SYK,JSON.stringify(SY))}catch(e){}}
+var TOK=null,TOKEXP=0,tokClient=null,tokPending=null,syncing=false,syncTimer=null,syState='',syMsg='';
+function tokOK(){return TOK&&Date.now()<TOKEXP}
+function fmtTime(t){var d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes())}
+function refreshChip(){
+  var c=$('#syncchip'),t;
+  if(syncing)t='⟳ 同步中';
+  else if(!SY.cid||!SY.connected)t='☁️ 未连接';
+  else if(!navigator.onLine)t=SY.dirty?'📴 离线·待同步':'📴 离线';
+  else if(syState==='err')t='⚠️ 同步失败';
+  else if(syState==='auth'||!tokOK())t=SY.dirty?'⚠️ 点我同步':'☁️ 点我同步';
+  else t=SY.dirty?'☁️ 待同步':'☁️ 已同步';
+  c.textContent=t;renderSyncUI();
+}
+function renderSyncUI(){
+  var el=$('#syline');if(!el)return;
+  var line=!SY.cid?'还没连接。按说明建好 Google 客户端 ID，粘贴在下面。':
+    !SY.connected?'已填写客户端 ID，点“连接并同步”登录 Google。':
+    '已连接 Google Drive'+(SY.last?'，上次同步 '+fmtTime(SY.last):'')+(SY.dirty?'；有记录等待同步':'');
+  if(syMsg)line+='\n'+syMsg;
+  el.textContent=line;
+  var ci=$('#cid');if(ci&&document.activeElement!==ci)ci.value=SY.cid||'';
+}
+function markDirty(){SY.dirty=true;SY.ver=(SY.ver||0)+1;saveSY();schedSync();refreshChip()}
+function schedSync(){
+  if(!SY.cid||!SY.connected)return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(function(){if(navigator.onLine&&tokOK())sync(false)},2000);
+}
+function loadGIS(){
+  return new Promise(function(res,rej){
+    if(window.google&&google.accounts&&google.accounts.oauth2)return res();
+    var old=document.getElementById('gis');
+    if(old){old.addEventListener('load',function(){res()});old.addEventListener('error',function(){rej()});return}
+    var sc=document.createElement('script');sc.id='gis';sc.src='https://accounts.google.com/gsi/client';sc.async=true;
+    sc.onload=function(){res()};sc.onerror=function(){sc.remove();rej(new Error('gis'))};
+    document.head.appendChild(sc);
+  });
+}
+function getToken(){
+  return new Promise(function(res,rej){
+    if(tokOK())return res(TOK);
+    if(!SY.cid)return rej(new Error('noid'));
+    loadGIS().then(function(){
+      if(!tokClient){
+        tokClient=google.accounts.oauth2.initTokenClient({client_id:SY.cid,scope:SCOPE,
+          callback:function(r){var p=tokPending;tokPending=null;if(!p)return;
+            if(r&&r.access_token){TOK=r.access_token;TOKEXP=Date.now()+((+r.expires_in||3600)-60)*1000;p.res(TOK)}else p.rej(new Error('auth'))},
+          error_callback:function(){var p=tokPending;tokPending=null;if(p)p.rej(new Error('auth'))}});
+      }
+      tokPending={res:res,rej:rej};
+      tokClient.requestAccessToken({prompt:''});
+    },function(){rej(new Error('gis'))});
+  });
+}
+function dfetch(url,opt){
+  opt=opt||{};opt.headers=Object.assign({Authorization:'Bearer '+TOK},opt.headers||{});
+  return fetch(url,opt).then(function(r){
+    if(r.status===401){TOK=null;throw new Error('auth')}
+    if(!r.ok)throw new Error('http '+r.status);return r});
+}
+function findFile(){
+  if(SY.fileId)return Promise.resolve(SY.fileId);
+  var q="name='"+FILENAME+"' and trashed=false";
+  return dfetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields='+encodeURIComponent('files(id,name)')+'&orderBy='+encodeURIComponent('modifiedTime desc'))
+    .then(function(r){return r.json()}).then(function(j){return j.files&&j.files[0]?j.files[0].id:null});
+}
+function createFile(body){
+  var b='ledgerbd'+Date.now();
+  var data='--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify({name:FILENAME,mimeType:'application/json'})+
+    '\r\n--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+body+'\r\n--'+b+'--';
+  return dfetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body:data}).then(function(r){return r.json()}).then(function(j){return j.id});
+}
+function updateFile(id,body){
+  return dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
+    {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:body});
+}
+function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,entries:S.entries,del:S.del||{}}}
+function mergeIn(P){
+  if(!P||!P.entries)return;
+  P.entries.forEach(function(e){if(e.c==='未知')e.c='错误'});
+  if(P.cats)P.cats=P.cats.map(function(c){return c==='未知'?'错误':c});
+  if(P.cs&&P.cs['未知']){P.cs['错误']=P.cs['未知'];delete P.cs['未知']}
+  var del=Object.assign({},S.del||{}),k;
+  for(k in (P.del||{}))del[k]=Math.max(del[k]||0,P.del[k]);
+  var map={},order=[];
+  S.entries.forEach(function(e){map[e.id]=e;order.push(e.id)});
+  P.entries.forEach(function(e){var l=map[e.id];
+    if(!l){map[e.id]=e;order.push(e.id)}else if((e.u||e.ts)>(l.u||l.ts))map[e.id]=e});
+  S.entries=order.filter(function(id){return !del[id]}).map(function(id){return map[id]});
+  S.del=del;
+  if((P.catsU||0)>(S.catsU||0)){S.cats=P.cats||S.cats;S.cs=P.cs||{};S.catsU=P.catsU}
+}
+function localAhead(P){
+  var m={},d=P.del||{},i,k;
+  (P.entries||[]).forEach(function(e){m[e.id]=e});
+  for(i=0;i<S.entries.length;i++){var e=S.entries[i],r=m[e.id];if(!r||(e.u||e.ts)>(r.u||r.ts))return true}
+  for(k in (S.del||{}))if(!d[k])return true;
+  return (S.catsU||0)>(P.catsU||0);
+}
+function sync(interactive,retried){
+  if(syncing)return Promise.resolve();
+  if(!SY.cid){syMsg='请先粘贴 Google 客户端 ID';refreshChip();return Promise.resolve()}
+  if(!navigator.onLine){syMsg='现在没有网络，联网后再同步（离线记的账都在手机里）';refreshChip();return Promise.resolve()}
+  syncing=true;syMsg='';syState='';refreshChip();
+  var ver0;
+  return getToken().then(function(){SY.connected=true;saveSY();return findFile()}).then(function(id){
+    if(!id){
+      ver0=SY.ver;
+      return createFile(JSON.stringify(payload())).then(function(nid){SY.fileId=nid});
+    }
+    SY.fileId=id;
+    return dfetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media').then(function(r){return r.json()}).then(function(remote){
+      mergeIn(remote);persist(true);renderAll();
+      ver0=SY.ver;
+      if(SY.dirty||localAhead(remote))return updateFile(id,JSON.stringify(payload()));
+    });
+  }).then(function(){
+    SY.last=Date.now();if(SY.ver===ver0)SY.dirty=false;saveSY();syState='ok';
+  }).catch(function(err){
+    var m=(err&&err.message)||'';
+    if(/404/.test(m)&&!retried){SY.fileId='';saveSY();syncing=false;return sync(interactive,true)}
+    if(m==='auth'){syState='auth';syMsg='需要登录或授权才能同步，点“立即同步”再试。如果没弹出窗口，请允许浏览器弹出窗口。'}
+    else if(m==='gis'){syState='err';syMsg='无法加载 Google 登录（可能没网络）'}
+    else if(m==='noid'){syMsg='请先粘贴 Google 客户端 ID'}
+    else{syState='err';syMsg='同步失败：'+m}
+  }).then(function(){syncing=false;refreshChip();if(SY.dirty&&syState==='ok')schedSync()});
+}
+function disconnect(){
+  try{if(TOK&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(TOK,function(){})}catch(e){}
+  TOK=null;TOKEXP=0;tokClient=null;SY.connected=false;SY.fileId='';saveSY();syState='';syMsg='已断开。Drive 里的文件不会被删除。';refreshChip();
+}
+function exportJSON(){
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(payload())],{type:'application/json'}));
+  a.download='记账本备份_'+ymd(new Date())+'.json';document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+$('#impfile').onchange=function(){
+  var f=this.files[0],inp=this;if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{var P=JSON.parse(rd.result);if(!P||!P.entries)throw 0;
+      var n0=S.entries.length;mergeIn(P);persist();renderAll();renderSettings();
+      alert('导入完成：现在共 '+S.entries.length+' 笔（原来 '+n0+' 笔）')}
+    catch(e){alert('这个文件不是有效的备份')}
+    inp.value='';
+  };
+  rd.readAsText(f);
+};
+function parseCSV(t){
+  var rows=[],row=[],f='',q=false,i,c;
+  if(t.charCodeAt(0)===0xFEFF)t=t.slice(1);
+  for(i=0;i<t.length;i++){c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';rows.push(row);row=[]}
+    else f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return rows.filter(function(r){return r.some(function(x){return x!==''})});
+}
+function ekey(d,c,t,a,m,n){return [d,c,t,a,(Math.round(m*100)/100).toFixed(2),n||''].join('|')}
+$('#impcsv').onchange=function(){
+  var f=this.files[0],inp=this;if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var rows=parseCSV(rd.result);
+      if(!rows.length||rows[0][0]!=='日期')throw 0;
+      var have={};
+      S.entries.forEach(function(e){var k=ekey(e.d,e.c,e.t,e.a,e.m,e.n);have[k]=(have[k]||0)+1});
+      var add=0,dup=0,bad=0,now=Date.now();
+      rows.slice(1).forEach(function(r,i){
+        var d=r[0],c=r[1]==='未知'?'错误':r[1],t=r[2]==='收入'?'in':r[2]==='支出'?'out':'',a=r[3],m=parseFloat(r[4]),n=r[5]||'',k=r[6]||'';
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!c||!t||['cash','tng','rhb'].indexOf(a)<0||!(m>0)){bad++;return}
+        var key=ekey(d,c,t,a,m,n);
+        if(have[key]>0){have[key]--;dup++;return}
+        S.entries.push({id:'imp'+now+'_'+i,ts:now+i,u:now,d:d,c:c,n:n,t:t,a:a,m:Math.round(m*100)/100,k:k});add++;
+      });
+      if(add){persist();renderAll();renderSettings()}
+      alert('导入完成：新增 '+add+' 笔，已有的 '+dup+' 笔跳过'+(bad?'，'+bad+' 行格式不对没导入':''));
+    }catch(e){alert('这个文件不是记账本导出的 CSV（第一行应该是“日期,分类,收支…”）')}
+    inp.value='';
+  };
+  rd.readAsText(f,'utf-8');
+};
+window.addEventListener('online',function(){refreshChip();loadGIS().catch(function(){});if(SY.dirty)schedSync()});
+window.addEventListener('offline',refreshChip);
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'&&SY.connected&&navigator.onLine&&tokOK()&&Date.now()-(SY.last||0)>30000)sync(false);
+});
+if(navigator.onLine)loadGIS().catch(function(){});
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(function(){});
+
+loadLocal();
+if(!S.seed26){ // 旧版本已存的数据里补上 2026 年（只补一次，不会把你删掉的记录再加回来）
+  var have={};S.entries.forEach(function(x){have[x.id]=1});
+  rawDataList.forEach(function(x){if(x.id.indexOf('n26_')===0&&!have[x.id])S.entries.push(x)});
+  S.seed26=true;
+}
+if(!S.seed26b){ // 旧版已存数据里补上 10 月 21–23 日的记录（只补一次）
+  var have2={};S.entries.forEach(function(x){have2[x.id]=1});
+  rawDataList.forEach(function(x){if(x.id.indexOf('n26b_')===0&&!have2[x.id])S.entries.push(x)});
+  S.seed26b=true;
+}
+if(!S.renErr){ // 旧版里的“未知”分类改名为“错误”（只做一次）
+  var chg=false,nowE=Date.now();
+  S.entries.forEach(function(x){if(x.c==='未知'){x.c='错误';x.u=nowE;chg=true}});
+  if(S.cats&&S.cats.indexOf('未知')>=0){S.cats=S.cats.map(function(c){return c==='未知'?'错误':c});chg=true}
+  if(S.cs&&S.cs['未知']){S.cs['错误']=S.cs['未知'];delete S.cs['未知'];chg=true}
+  if(chg)S.catsU=nowE;
+  S.renErr=true;
+}
+applyTabOrder();
+persist(true);
+initStats();
+$('#fd').value=ymd(new Date());
+renderAll();
+refreshChip();
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,31 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>记账本</title></head>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>记账本 (Ledger) – 个人记账应用</title>
+<style>
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:720px;margin:40px auto;padding:0 18px;line-height:1.7;color:#1c1f24}
+h1{font-size:28px;margin-bottom:4px} .sub{color:#667;margin-top:0}
+a{color:#1a6fd4} .box{background:#f4f6f8;border-radius:10px;padding:14px 18px;margin:18px 0}
+</style>
+</head>
 <body>
-<h1>记账本</h1>
-<p>一个支持离线记账、通过 Google Drive 同步数据的个人记账网页应用。</p>
-<p><a href="privacy.html">隐私政策</a></p>
-</body></html>
+<h1>记账本 (Ledger)</h1>
+<p class="sub">A simple personal expense tracker that works offline and syncs to your own Google Drive.</p>
+
+<p><a href="./">打开记账本 / Open the app</a></p>
+
+<h2>这是什么 / What it is</h2>
+<p>记账本是一个个人记账网页应用：记录每一笔收入和支出，按分类和账户统计，支持离线使用，并可安装到手机、平板和电脑。</p>
+<p>Ledger is a personal finance web app for recording income and expenses by category and account. It works offline and can be installed on phones, tablets and computers.</p>
+
+<h2>Google Drive 同步 / Google Drive sync</h2>
+<p>如果你选择连接 Google 账号，应用只会使用 <code>drive.file</code> 权限，在你自己的 Google Drive 里创建并读写一个名为“记账本数据.json”的文件，用来在你的多台设备之间同步账本。应用无法访问你 Drive 里的其他文件。</p>
+<p>If you connect your Google account, the app uses only the <code>drive.file</code> scope to create and read a single file named “记账本数据.json” in your own Google Drive, to sync your ledger between your devices. It cannot access any other files in your Drive.</p>
+
+<div class="box">
+<p><a href="privacy.html">隐私权政策 / Privacy Policy</a></p>
+</div>
+</body>
+</html>

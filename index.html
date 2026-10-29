@@ -24,7 +24,7 @@ input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-ra
 .btn.sec{background:transparent;color:var(--acc)}
 .btn.sm{padding:5px 10px;font-size:13px}
 .st{font-size:12px;color:var(--mut);margin:4px 4px 0}
-.bal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bal{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
 .bal div{background:rgba(255,255,255,.06);border-radius:10px;padding:8px;text-align:center}
 .bal b{display:block;font-size:17px}
 .in{color:var(--in)}.out{color:var(--out)}
@@ -147,6 +147,14 @@ details.more summary::-webkit-details-marker{display:none}
 </section>
 
 <section id="p-settings" hidden>
+<div class="sech">账户管理</div>
+<div class="card" id="acclist"></div>
+<div class="card">
+<div class="row"><div><label>新账户名称</label><input id="nan" placeholder="例如：bank" maxlength="20"></div>
+<div><label>期初余额（可不填）</label><input id="nao" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div></div>
+<div class="row" style="margin-top:12px"><button class="btn" id="addacc">添加账户</button></div>
+<div class="st" id="accmsg"></div>
+</div>
 <div class="sech">分类管理</div>
 <div class="card" id="catlist"></div>
 <div class="card">
@@ -225,6 +233,18 @@ function fillSelect(el,val,hideTr){
   el.innerHTML=h;el.value=val||'';if(!val)el.selectedIndex=0;
 }
 
+function allAccts(){
+  var a=(S.accts&&S.accts.length?S.accts:ACC).slice();
+  S.entries.forEach(function(e){if(e.a&&a.indexOf(e.a)<0)a.push(e.a)});
+  return a;
+}
+function accCount(a){var n=0;S.entries.forEach(function(e){if(e.a===a)n++});return n}
+function fillAcct(el,val){
+  var h='';allAccts().forEach(function(a){h+='<option value="'+esc(a)+'">'+esc(a)+'</option>'});
+  el.innerHTML=h;
+  var ok=[].some.call(el.options,function(o){return o.value===val});
+  el.value=ok?val:(el.options[0]?el.options[0].value:'');
+}
 var HIDE=true; // 每次打开 app 默认隐藏余额，点眼睛才显示
 function eyeSVG(open){
   var a='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
@@ -233,9 +253,10 @@ function eyeSVG(open){
 }
 function renderForm(){
   var cur=$('#fc').value;fillSelect($('#fc'),cur,true);
+  fillAcct($('#fa'),$('#fa').value);fillAcct($('#fa2'),$('#fa2').value);
   var b='',totalBal=0;
-  ACC.forEach(function(a){
-    var v=+S.open[a]||0;
+  allAccts().forEach(function(a){
+    var v=+(S.open&&S.open[a])||0;
     S.entries.forEach(function(e){if(e.a===a)v+=e.t==='in'?e.m:-e.m});
     totalBal+=v;
     b+='<div>'+a+'<b class="'+(!HIDE&&v<0?'out':'')+'">'+(HIDE?'••••':money(v))+'</b></div>';
@@ -344,6 +365,13 @@ function renderSettings(){
       (lock?'<small style="color:var(--mut)">系统分类</small>':'<button class="btn sm sec" data-ce="'+esc(c)+'">编辑</button><button class="btn sm sec" data-cd="'+esc(c)+'">删除</button>')+'</div>';
   });
   $('#catlist').innerHTML=h;
+  var ah='';
+  allAccts().forEach(function(a){
+    var n=accCount(a),op=+(S.open&&S.open[a])||0;
+    ah+='<div class="crow"><div class="ic" style="background:#54a0ff2e">💳</div><div class="nm">'+esc(a)+'<small>'+n+' 笔'+(op?' · 期初 RM '+fmt(op):'')+'</small></div>'+
+      '<button class="btn sm sec" data-ae="'+esc(a)+'">编辑</button><button class="btn sm sec" data-ad="'+esc(a)+'">删除</button></div>';
+  });
+  $('#acclist').innerHTML=ah;
   $('#expn').textContent=S.entries.length+' 笔';
   renderSyncUI();
 }
@@ -373,6 +401,34 @@ function delCat(c){
   if(!confirm('确定删除分类「'+c+'」？'))return;
   S.cats=S.cats.filter(function(x){return x!==c});if(S.cs)delete S.cs[c];
   if(F.cat===c)F.cat='';S.catsU=Date.now();
+  persist();renderAll();renderSettings();
+}
+function accTouch(){S.accU=Date.now()}
+function addAcc(){
+  var n=$('#nan').value.trim(),o=parseFloat($('#nao').value)||0,m=$('#accmsg');
+  if(!n){m.textContent='请输入账户名称';return}
+  if(allAccts().indexOf(n)>=0){m.textContent='已经有这个账户了';return}
+  S.accts=allAccts();S.accts.push(n);S.open=S.open||{};S.open[n]=Math.round(o*100)/100;accTouch();
+  $('#nan').value='';$('#nao').value='';persist();renderAll();renderSettings();m.textContent='已添加：'+n;
+}
+function editAcc(old){
+  var n=prompt('账户名称',old);if(n===null)return;n=n.trim();if(!n)return;
+  var cur=+(S.open&&S.open[old])||0,o=prompt('期初余额（RM）',cur);if(o===null)o=cur;o=parseFloat(o);if(isNaN(o))o=cur;
+  if(n!==old){
+    if(allAccts().indexOf(n)>=0){alert('已经有这个账户了');return}
+    S.accts=allAccts().map(function(x){return x===old?n:x});
+    S.entries.forEach(function(e){if(e.a===old){e.a=n;e.u=Date.now()}});
+    if(S.open&&old in S.open)delete S.open[old];
+  }else S.accts=allAccts();
+  S.open=S.open||{};S.open[n]=Math.round(o*100)/100;accTouch();
+  persist();renderAll();renderSettings();
+}
+function delAcc(a){
+  var c=accCount(a);
+  if(c>0){alert('「'+a+'」还有 '+c+' 笔记录在用，不能删除。\n请先把那些记录改到别的账户，或者用“编辑”改名。');return}
+  if(allAccts().length<=1){alert('至少要保留一个账户');return}
+  if(!confirm('确定删除账户「'+a+'」？'))return;
+  S.accts=allAccts().filter(function(x){return x!==a});if(S.open)delete S.open[a];accTouch();
   persist();renderAll();renderSettings();
 }
 function csvCell(v){v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
@@ -467,7 +523,11 @@ function trMode(){
   $('#falbl').textContent=on?'转出账户':'账户';
 }
 function setFormDefaults(){ // 默认：支出 / tng / 食物
-  $('#ft').value='out';$('#fa').value='tng';$('#fa2').value='cash';
+  var accs=allAccts();
+  $('#ft').value='out';
+  $('#fa').value=accs.indexOf('tng')>=0?'tng':accs[0];
+  var to=accs.indexOf('cash')>=0&&$('#fa').value!=='cash'?'cash':accs.filter(function(x){return x!==$('#fa').value})[0]||accs[0];
+  $('#fa2').value=to;
   var c=$('#fc');if([].some.call(c.options,function(o){return o.value==='食物'}))c.value='食物';
   trMode();
 }
@@ -502,6 +562,9 @@ function range(r){
 document.addEventListener('click',function(ev){
   var t=ev.target,el;
   if(t.closest('#eyebtn')){HIDE=!HIDE;renderForm();return}
+  if((el=t.closest('[data-ae]')))return editAcc(el.dataset.ae);
+  if((el=t.closest('[data-ad]')))return delAcc(el.dataset.ad);
+  if(t.closest('#addacc'))return addAcc();
   if(t.closest('#syncchip')){if(SY.cid&&SY.connected)sync(true);else tab('settings');return}
   if(t.closest('#sycon')){var cv=$('#cid').value.trim();if(!cv){syMsg='请先粘贴 Google 客户端 ID';renderSyncUI();return}
     if(cv!==SY.cid){SY.cid=cv;tokClient=null;TOK=null;SY.connected=false;SY.fileId=''}saveSY();sync(true);return}
@@ -635,7 +698,7 @@ function updateFile(id,body){
   return dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
     {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:body});
 }
-function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,entries:S.entries,del:S.del||{}}}
+function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,entries:S.entries,del:S.del||{}}}
 function mergeIn(P){
   if(!P||!P.entries)return;
   P.entries.forEach(function(e){if(e.c==='未知')e.c='错误'});
@@ -650,13 +713,14 @@ function mergeIn(P){
   S.entries=order.filter(function(id){return !del[id]}).map(function(id){return map[id]});
   S.del=del;
   if((P.catsU||0)>(S.catsU||0)){S.cats=P.cats||S.cats;S.cs=P.cs||{};S.catsU=P.catsU}
+  if((P.accU||0)>(S.accU||0)){S.accts=P.accts||S.accts;S.open=P.open||S.open;S.accU=P.accU}
 }
 function localAhead(P){
   var m={},d=P.del||{},i,k;
   (P.entries||[]).forEach(function(e){m[e.id]=e});
   for(i=0;i<S.entries.length;i++){var e=S.entries[i],r=m[e.id];if(!r||(e.u||e.ts)>(r.u||r.ts))return true}
   for(k in (S.del||{}))if(!d[k])return true;
-  return (S.catsU||0)>(P.catsU||0);
+  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0);
 }
 function sync(interactive,retried){
   if(syncing)return Promise.resolve();
@@ -734,9 +798,10 @@ $('#impcsv').onchange=function(){
       var add=0,dup=0,bad=0,now=Date.now();
       rows.slice(1).forEach(function(r,i){
         var d=r[0],c=r[1]==='未知'?'错误':r[1],t=r[2]==='收入'?'in':r[2]==='支出'?'out':'',a=r[3],m=parseFloat(r[4]),n=r[5]||'',k=r[6]||'';
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!c||!t||['cash','tng','rhb'].indexOf(a)<0||!(m>0)){bad++;return}
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!c||!t||!a||!(m>0)){bad++;return}
         var key=ekey(d,c,t,a,m,n);
         if(have[key]>0){have[key]--;dup++;return}
+        if(allAccts().indexOf(a)<0){S.accts=allAccts();S.accts.push(a);S.accU=now}
         S.entries.push({id:'imp'+now+'_'+i,ts:now+i,u:now,d:d,c:c,n:n,t:t,a:a,m:Math.round(m*100)/100,k:k});add++;
       });
       if(add){persist();renderAll();renderSettings()}
@@ -779,6 +844,7 @@ if(!S.renErr){ // 旧版里的“未知”分类改名为“错误”（只做�
   if(chg)S.catsU=nowE;
   S.renErr=true;
 }
+if(!S.accts)S.accts=ACC.slice();
 applyTabOrder();
 persist(true);
 initStats();

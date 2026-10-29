@@ -38,6 +38,16 @@ input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-ra
 .syline{white-space:pre-line;font-size:13px;color:var(--mut);margin:0 0 8px}
 .eye{background:transparent;border:0;color:rgba(255,255,255,.75);padding:6px;margin-right:-6px;border-radius:50%;cursor:pointer;line-height:0}
 .eye:active{background:rgba(255,255,255,.14)}
+.qbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.qbar .q small{opacity:.6;margin-left:5px;font-size:12px}
+.qbar .q.in{border-color:rgba(111,208,143,.45)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:40;display:flex;align-items:center;gap:14px;background:rgba(34,38,46,.98);border:1px solid var(--line);color:var(--fg);padding:10px 14px;border-radius:12px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:92vw}
+.toast button{background:transparent;border:0;color:var(--acc);font-weight:700;font-size:13px;cursor:pointer;padding:2px 4px;white-space:nowrap;flex:0 0 auto}
+.dlg{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:18px}
+.dbox{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:16px;width:100%;max-width:380px;max-height:90vh;overflow:auto}
+.dtitle{font-weight:700;margin-bottom:8px}
+.dtext{font-size:14px;line-height:1.6;margin-bottom:6px}
+.drow{display:flex;gap:8px;margin-top:14px}.drow .btn{flex:1}
 .crow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .crow:first-of-type{border-top:0}
 .crow .nm{flex:1;min-width:0;font-weight:600}
@@ -114,6 +124,7 @@ details.more summary::-webkit-details-marker{display:none}
   </div>
   <div class="bal" id="top-account-bal"></div>
 </div>
+<div class="qbar" id="quickbar" hidden></div>
 <div class="card">
 <div class="row"><div><label>日期</label><input id="fd" type="date"></div>
 <div id="catbox"><label>分类</label><select id="fc"></select></div></div>
@@ -123,6 +134,7 @@ details.more summary::-webkit-details-marker{display:none}
 <div><label>金额</label><input id="fm" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div></div>
 <div id="trbox" hidden><label>转入账户（钱转到哪里）</label><select id="fa2"><option value="cash">cash</option><option value="tng" selected>tng</option><option value="rhb">rhb</option></select><div class="st">选“转账”后，只要记一次，会自动一笔转出、一笔转入，分类固定为“转账”，不计入收入和支出。</div></div>
 <div class="row" style="margin-top:12px"><button class="btn" id="save">添加</button><button class="btn sec" id="cancel" hidden>取消修改</button></div>
+<div style="margin-top:10px"><button class="btn sm sec" id="saveq" type="button">⭐ 存为快捷项目</button></div>
 <div class="st" id="msg"></div>
 </div>
 </section>
@@ -147,6 +159,11 @@ details.more summary::-webkit-details-marker{display:none}
 </section>
 
 <section id="p-settings" hidden>
+<div class="sech">快捷项目</div>
+<div class="card">
+<div id="quicklist"></div>
+<div class="st">在记账页填好一笔（详细、分类、账户、收支、金额），点“⭐ 存为快捷项目”就会出现在记账页最上面。点一下快捷按钮就直接记一笔（用日期栏里的日期，记完 6 秒内可以撤销）。没有固定金额的会只填好表单，等你输入金额。</div>
+</div>
 <div class="sech">账户管理</div>
 <div class="card" id="acclist"></div>
 <div class="card">
@@ -185,6 +202,7 @@ details.more summary::-webkit-details-marker{display:none}
 </section>
 </main>
 
+<div class="toast" id="toast" hidden></div>
 <nav class="tabbar" role="tablist">
 <button role="tab" data-t="add" aria-selected="true"><span>✏️</span>记账</button>
 <button role="tab" data-t="list" aria-selected="false"><span>🕘</span>明细</button>
@@ -378,6 +396,7 @@ function renderSettings(){
       '<button class="btn sm sec" data-ae="'+esc(a)+'">编辑</button><button class="btn sm sec" data-ad="'+esc(a)+'">删除</button></div>';
   });
   $('#acclist').innerHTML=ah;
+  renderQuickList();
   var wi=$('#wmin');if(wi&&document.activeElement!==wi)wi.value=S.wm||'';
   $('#expn').textContent=S.entries.length+' 笔';
   renderSyncUI();
@@ -390,26 +409,112 @@ function addCat(){
   $('#ncn').value='';$('#nci').value='';S.catsU=Date.now();persist();renderAll();renderSettings();m.textContent='已添加：'+n;
 }
 function editCat(old){
-  var n=prompt('分类名称',old);if(n===null)return;n=n.trim();if(!n)return;
-  var st=cs(old),ic=prompt('图标（一个 emoji）',st[0]);if(ic===null)ic=st[0];ic=ic.trim()||st[0];
-  if(n!==old){
-    if(allCats().indexOf(n)>=0){alert('已经有这个分类了');return}
-    S.cats=S.cats.map(function(x){return x===old?n:x});if(S.cats.indexOf(n)<0)S.cats.push(n);
-    S.entries.forEach(function(e){if(e.c===old){e.c=n;e.u=Date.now()}});
-    if(S.cs&&S.cs[old])delete S.cs[old];
-    if(F.cat===old)F.cat=n;
-  }
-  S.cs=S.cs||{};S.cs[n]=[ic,st[1]];S.catsU=Date.now();
-  persist();renderAll();renderSettings();
+  var st=cs(old);
+  dlg({title:'编辑分类',fields:[{label:'分类名称',value:old},{label:'图标（一个 emoji）',value:st[0]}]},function(v){
+    var n=v[0].trim();if(!n)return;var ic=v[1].trim()||st[0];
+    if(n!==old){
+      if(allCats().indexOf(n)>=0){dlgAlert('已经有这个分类了');return}
+      S.cats=S.cats.map(function(x){return x===old?n:x});if(S.cats.indexOf(n)<0)S.cats.push(n);
+      S.entries.forEach(function(e){if(e.c===old){e.c=n;e.u=Date.now()}});
+      quickList().forEach(function(p){if(p.c===old)p.c=n});S.quickU=Date.now();
+      if(S.cs&&S.cs[old])delete S.cs[old];
+      if(F.cat===old)F.cat=n;
+    }
+    S.cs=S.cs||{};S.cs[n]=[ic,st[1]];S.catsU=Date.now();
+    persist();renderAll();renderSettings();
+  });
 }
 function delCat(c){
   var n=catCount(c);
-  if(n>0){alert('「'+c+'」还有 '+n+' 笔记录在用，不能删除。\n请先把那些记录改到别的分类，或者用“编辑”改名。');return}
-  if(!confirm('确定删除分类「'+c+'」？'))return;
-  S.cats=S.cats.filter(function(x){return x!==c});if(S.cs)delete S.cs[c];
-  if(F.cat===c)F.cat='';S.catsU=Date.now();
-  persist();renderAll();renderSettings();
+  if(n>0){dlgAlert('「'+c+'」还有 '+n+' 笔记录在用，不能删除。\n请先把那些记录改到别的分类，或者用“编辑”改名。');return}
+  dlgConfirm('确定删除分类「'+c+'」？',function(){
+    S.cats=S.cats.filter(function(x){return x!==c});if(S.cs)delete S.cs[c];
+    if(F.cat===c)F.cat='';S.catsU=Date.now();
+    S.quick=quickList().filter(function(p){return p.c!==c});S.quickU=Date.now();
+    persist();renderAll();renderSettings();
+  });
 }
+/* ---------- 页面内弹窗（不依赖浏览器自带的 prompt/alert/confirm） ---------- */
+function dlg(o,cb){
+  var old=$('#dlg');if(old)old.remove();
+  var w=document.createElement('div');w.id='dlg';w.className='dlg';
+  var h='<div class="dbox">'+(o.title?'<div class="dtitle">'+esc(o.title)+'</div>':'')+(o.text?'<div class="dtext">'+esc(o.text).replace(/\n/g,'<br>')+'</div>':'');
+  (o.fields||[]).forEach(function(f,i){h+='<label>'+esc(f.label)+'</label><input data-f="'+i+'" value="'+esc(f.value==null?'':f.value)+'"'+(f.num?' inputmode="decimal"':'')+' autocomplete="off">'});
+  h+='<div class="drow">'+(o.noCancel?'':'<button type="button" class="btn sec" data-dc>取消</button>')+'<button type="button" class="btn" data-dok>'+esc(o.ok||'确定')+'</button></div></div>';
+  w.innerHTML=h;document.body.appendChild(w);
+  var ins=w.querySelectorAll('input');if(ins[0])ins[0].focus();
+  function done(){var v=[].map.call(ins,function(x){return x.value});w.remove();if(cb)cb(v)}
+  w.addEventListener('click',function(e){
+    if(e.target===w||e.target.closest('[data-dc]')){w.remove();return}
+    if(e.target.closest('[data-dok]'))done();
+  });
+  w.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();done()}if(e.key==='Escape')w.remove()});
+}
+function dlgAlert(text){dlg({text:text,ok:'知道了',noCancel:true})}
+function dlgConfirm(text,cb){dlg({text:text,ok:'确定'},function(){cb()})}
+
+/* ---------- 常用项目快捷键 ---------- */
+function quickList(){return S.quick||[]}
+function renderQuick(){
+  var q=quickList(),bar=$('#quickbar');if(!bar)return;
+  if(!q.length){bar.hidden=false;bar.innerHTML='<div class="st" style="margin:0 2px">⭐ 还没有快捷项目。填好一笔后点下面的“存为快捷项目”，就会变成这里的一个按钮。</div>';return}
+  bar.hidden=false;
+  bar.innerHTML=q.map(function(p){
+    return '<button class="chip q'+(p.t==='in'?' in':'')+'" type="button" data-q="'+esc(p.id)+'">'+(p.t==='in'?'＋ ':'')+esc(p.n)+(p.m>0?'<small>'+amt(p.m)+'</small>':'')+'</button>';
+  }).join('');
+}
+function renderQuickList(){
+  var el=$('#quicklist');if(!el)return;
+  var q=quickList();
+  if(!q.length){el.innerHTML='<div class="empty" style="padding:8px 0">还没有快捷项目</div>';return}
+  el.innerHTML=q.map(function(p){
+    return '<div class="crow"><div class="ic" style="background:'+cs(p.c)[1]+'2e">'+cs(p.c)[0]+'</div><div class="nm">'+esc(p.n)+'<small>'+esc(p.c)+' · '+esc(p.a)+' · '+(p.m>0?(p.t==='in'?'+':'−')+'RM '+amt(p.m):(p.t==='in'?'收入':'支出')+'，金额不固定')+'</small></div>'+
+      '<button class="btn sm sec" data-qe="'+esc(p.id)+'">编辑</button><button class="btn sm sec" data-qd="'+esc(p.id)+'">删除</button></div>';
+  }).join('');
+}
+var toastT=null,TOAST_UNDO=null;
+function toast(msg,undoFn){
+  var t=$('#toast');t.innerHTML='<span>'+esc(msg)+'</span>'+(undoFn?'<button id="toastundo" type="button">撤销</button>':'');
+  t.hidden=false;TOAST_UNDO=undoFn||null;
+  clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true;TOAST_UNDO=null},6000);
+}
+function fillFromQuick(p){
+  $('#ft').value=p.t;
+  if([].some.call($('#fa').options,function(o){return o.value===p.a}))$('#fa').value=p.a;
+  var fc=$('#fc');
+  if(![].some.call(fc.options,function(o){return o.value===p.c})){var op=document.createElement('option');op.value=p.c;op.textContent=p.c;fc.appendChild(op)}
+  fc.value=p.c;$('#fn').value=p.n;$('#fm').value=p.m>0?p.m:'';trMode();
+}
+function useQuick(id){
+  var p=quickList().filter(function(x){return x.id===id})[0];if(!p)return;
+  if(editId||!(p.m>0)){fillFromQuick(p);if(!(p.m>0))$('#fm').focus();return}
+  var d=$('#fd').value;if(!d){$('#msg').textContent='请先选日期';return}
+  var now=Date.now(),e={id:uid(),ts:now,u:now,d:d,c:p.c,n:p.n,t:p.t,a:p.a,m:Math.round(p.m*100)/100,k:''};
+  S.entries.push(e);persist();renderAll();
+  toast('已记：'+p.n+' '+(p.t==='in'?'+':'−')+'RM '+money(p.m)+'（'+p.a+'）',function(){
+    S.entries=S.entries.filter(function(x){return x.id!==e.id});S.del=S.del||{};S.del[e.id]=Date.now();persist();renderAll();
+  });
+}
+function saveQuick(){
+  var n=$('#fn').value.trim(),m=parseFloat($('#fm').value)||0,t=$('#ft').value,msg=$('#msg');
+  if(t==='tr'){msg.textContent='转账暂时不能存成快捷项目';return}
+  if(!n){msg.textContent='先在“详细”里写一个名字（比如：饭+蛋），再点“存为快捷项目”';$('#fn').focus();return}
+  S.quick=quickList().concat([{id:'q'+uid(),n:n,c:$('#fc').value,a:$('#fa').value,t:t,m:Math.round(m*100)/100}]);S.quickU=Date.now();
+  persist();renderAll();msg.textContent='';toast('已存为快捷项目：'+n);
+}
+function editQuick(id){
+  var p=quickList().filter(function(x){return x.id===id})[0];if(!p)return;
+  dlg({title:'编辑快捷项目',fields:[{label:'名称',value:p.n},{label:'金额（RM，填 0 表示不固定金额）',value:p.m>0?p.m:0,num:true}]},function(v){
+    var n=v[0].trim();if(!n)return;var m=parseFloat(v[1]);if(isNaN(m)||m<0)m=p.m;
+    p.n=n;p.m=Math.round(m*100)/100;S.quickU=Date.now();persist();renderAll();renderSettings();
+  });
+}
+function delQuick(id){
+  dlgConfirm('确定删除这个快捷项目？',function(){
+    S.quick=quickList().filter(function(x){return x.id!==id});S.quickU=Date.now();persist();renderAll();renderSettings();
+  });
+}
+
 function accTouch(){S.accU=Date.now()}
 function addAcc(){
   var n=$('#nan').value.trim(),o=parseFloat($('#nao').value)||0,m=$('#accmsg');
@@ -419,24 +524,29 @@ function addAcc(){
   $('#nan').value='';$('#nao').value='';persist();renderAll();renderSettings();m.textContent='已添加：'+n;
 }
 function editAcc(old){
-  var n=prompt('账户名称',old);if(n===null)return;n=n.trim();if(!n)return;
-  var cur=+(S.open&&S.open[old])||0,o=prompt('期初余额（RM）',cur);if(o===null)o=cur;o=parseFloat(o);if(isNaN(o))o=cur;
-  if(n!==old){
-    if(allAccts().indexOf(n)>=0){alert('已经有这个账户了');return}
-    S.accts=allAccts().map(function(x){return x===old?n:x});
-    S.entries.forEach(function(e){if(e.a===old){e.a=n;e.u=Date.now()}});
-    if(S.open&&old in S.open)delete S.open[old];
-  }else S.accts=allAccts();
-  S.open=S.open||{};S.open[n]=Math.round(o*100)/100;accTouch();
-  persist();renderAll();renderSettings();
+  var cur=+(S.open&&S.open[old])||0;
+  dlg({title:'编辑账户',fields:[{label:'账户名称',value:old},{label:'期初余额（RM）',value:cur,num:true}]},function(v){
+    var n=v[0].trim();if(!n)return;var o=parseFloat(v[1]);if(isNaN(o))o=cur;
+    if(n!==old){
+      if(allAccts().indexOf(n)>=0){dlgAlert('已经有这个账户了');return}
+      S.accts=allAccts().map(function(x){return x===old?n:x});
+      S.entries.forEach(function(e){if(e.a===old){e.a=n;e.u=Date.now()}});
+      quickList().forEach(function(p){if(p.a===old)p.a=n});S.quickU=Date.now();
+      if(S.open&&old in S.open)delete S.open[old];
+    }else S.accts=allAccts();
+    S.open=S.open||{};S.open[n]=Math.round(o*100)/100;accTouch();
+    persist();renderAll();renderSettings();
+  });
 }
 function delAcc(a){
   var c=accCount(a);
-  if(c>0){alert('「'+a+'」还有 '+c+' 笔记录在用，不能删除。\n请先把那些记录改到别的账户，或者用“编辑”改名。');return}
-  if(allAccts().length<=1){alert('至少要保留一个账户');return}
-  if(!confirm('确定删除账户「'+a+'」？'))return;
-  S.accts=allAccts().filter(function(x){return x!==a});if(S.open)delete S.open[a];accTouch();
-  persist();renderAll();renderSettings();
+  if(c>0){dlgAlert('「'+a+'」还有 '+c+' 笔记录在用，不能删除。\n请先把那些记录改到别的账户，或者用“编辑”改名。');return}
+  if(allAccts().length<=1){dlgAlert('至少要保留一个账户');return}
+  dlgConfirm('确定删除账户「'+a+'」？',function(){
+    S.accts=allAccts().filter(function(x){return x!==a});if(S.open)delete S.open[a];accTouch();
+    S.quick=quickList().filter(function(p){return p.a!==a});S.quickU=Date.now();
+    persist();renderAll();renderSettings();
+  });
 }
 function csvCell(v){v=v==null?'':String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function exportCSV(){
@@ -516,7 +626,7 @@ var dragBtn=null,dragTimer=null,dragId=null,sx=0,sy=0,suppress=false;
 })();
 
 function applyWM(){var w=$('#wm');if(w)w.textContent=S.wm||''}
-function renderAll(){renderForm();renderList();renderStats();applyWM()}
+function renderAll(){renderForm();renderList();renderStats();applyWM();renderQuick()}
 var TITLES={add:'记账',stats:'统计',list:'明细',settings:'设置'};
 function tab(t){
   ['add','stats','list','settings'].forEach(function(x){$('#p-'+x).hidden=x!==t});
@@ -570,6 +680,11 @@ function range(r){
 document.addEventListener('click',function(ev){
   var t=ev.target,el;
   if(t.closest('#eyebtn')){HIDE=!HIDE;renderForm();return}
+  if(t.closest('#toastundo')){var uf=TOAST_UNDO;TOAST_UNDO=null;$('#toast').hidden=true;if(uf)uf();return}
+  if((el=t.closest('[data-q]')))return useQuick(el.dataset.q);
+  if(t.closest('#saveq'))return saveQuick();
+  if((el=t.closest('[data-qe]')))return editQuick(el.dataset.qe);
+  if((el=t.closest('[data-qd]')))return delQuick(el.dataset.qd);
   if((el=t.closest('[data-ae]')))return editAcc(el.dataset.ae);
   if((el=t.closest('[data-ad]')))return delAcc(el.dataset.ad);
   if(t.closest('#addacc'))return addAcc();
@@ -610,7 +725,7 @@ document.addEventListener('click',function(ev){
   if((el=t.closest('[data-x]'))){
     var me=S.entries.filter(function(x){return x.id===el.dataset.x})[0];
     var gid=me&&me.g;
-    if(confirm(gid?'这是一笔转账的其中一边，会把转出和转入两笔一起删除，确定？':'确定删除这一笔？')){var rm=S.entries.filter(function(x){return gid?x.g===gid:x.id===el.dataset.x});S.del=S.del||{};rm.forEach(function(x){S.del[x.id]=Date.now()});S.entries=S.entries.filter(function(x){return gid?x.g!==gid:x.id!==el.dataset.x});persist();renderAll()}return;
+    dlgConfirm(gid?'这是一笔转账的其中一边，会把转出和转入两笔一起删除，确定？':'确定删除这一笔？',function(){var rm=S.entries.filter(function(x){return gid?x.g===gid:x.id===el.dataset.x});S.del=S.del||{};rm.forEach(function(x){S.del[x.id]=Date.now()});S.entries=S.entries.filter(function(x){return gid?x.g!==gid:x.id!==el.dataset.x});persist();renderAll()});return;
   }
   if(t.closest('#clr')){F={from:'',to:'',cat:'',t:'',q:''};$('#lq').value='';return renderList()}
   if((el=t.closest('.li')))el.classList.toggle('open');
@@ -706,7 +821,7 @@ function updateFile(id,body){
   return dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
     {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:body});
 }
-function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,entries:S.entries,del:S.del||{}}}
+function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,quick:quickList(),quickU:S.quickU||0,entries:S.entries,del:S.del||{}}}
 function mergeIn(P){
   if(!P||!P.entries)return;
   P.entries.forEach(function(e){if(e.c==='未知')e.c='错误'});
@@ -723,13 +838,14 @@ function mergeIn(P){
   if(P.cats&&((P.catsU||0)>(S.catsU||0)||!S.catsU)){S.cats=P.cats;S.cs=P.cs||{};S.catsU=P.catsU||0}
   if(P.accts&&((P.accU||0)>(S.accU||0)||!S.accU)){S.accts=P.accts;S.open=P.open||S.open;S.accU=P.accU||0}
   if(P.wmU&&P.wmU>(S.wmU||0)){S.wm=P.wm||'';S.wmU=P.wmU}
+  if(P.quick&&(P.quickU||0)>(S.quickU||0)){S.quick=P.quick;S.quickU=P.quickU}
 }
 function localAhead(P){
   var m={},d=P.del||{},i,k;
   (P.entries||[]).forEach(function(e){m[e.id]=e});
   for(i=0;i<S.entries.length;i++){var e=S.entries[i],r=m[e.id];if(!r||(e.u||e.ts)>(r.u||r.ts))return true}
   for(k in (S.del||{}))if(!d[k])return true;
-  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0);
+  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0);
 }
 function sync(interactive,retried){
   if(syncing)return Promise.resolve();
@@ -775,8 +891,8 @@ $('#impfile').onchange=function(){
   rd.onload=function(){
     try{var P=JSON.parse(rd.result);if(!P||!P.entries)throw 0;
       var n0=S.entries.length;mergeIn(P);persist();renderAll();renderSettings();
-      alert('导入完成：现在共 '+S.entries.length+' 笔（原来 '+n0+' 笔）')}
-    catch(e){alert('这个文件不是有效的备份')}
+      dlgAlert('导入完成：现在共 '+S.entries.length+' 笔（原来 '+n0+' 笔）')}
+    catch(e){dlgAlert('这个文件不是有效的备份')}
     inp.value='';
   };
   rd.readAsText(f);
@@ -814,8 +930,8 @@ $('#impcsv').onchange=function(){
         S.entries.push({id:'imp'+now+'_'+i,ts:now+i,u:now,d:d,c:c,n:n,t:t,a:a,m:Math.round(m*100)/100,k:k});add++;
       });
       if(add){persist();renderAll();renderSettings()}
-      alert('导入完成：新增 '+add+' 笔，已有的 '+dup+' 笔跳过'+(bad?'，'+bad+' 行格式不对没导入':''));
-    }catch(e){alert('这个文件不是记账本导出的 CSV（第一行应该是“日期,分类,收支…”）')}
+      dlgAlert('导入完成：新增 '+add+' 笔，已有的 '+dup+' 笔跳过'+(bad?'，'+bad+' 行格式不对没导入':''));
+    }catch(e){dlgAlert('这个文件不是记账本导出的 CSV（第一行应该是“日期,分类,收支…”）')}
     inp.value='';
   };
   rd.readAsText(f,'utf-8');

@@ -101,7 +101,7 @@ details.more summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
-<div class="topr"><span class="wm">杨yeong</span><button id="syncchip" class="sync" type="button">☁️ 未连接</button></div>
+<div class="topr"><span class="wm" id="wm"></span><button id="syncchip" class="sync" type="button">☁️ 未连接</button></div>
 <main>
 <h1 id="ttl">记账</h1>
 
@@ -163,6 +163,11 @@ details.more summary::-webkit-details-marker{display:none}
 <div class="row" style="margin-top:12px"><button class="btn" id="addcat">添加分类</button></div>
 <div class="st" id="catmsg"></div>
 </div>
+<div class="sech">个性化</div>
+<div class="card">
+<label>顶部小字（可不填）</label><input id="wmin" placeholder="例如：你的名字" maxlength="20" autocomplete="off">
+<div class="st">显示在右上角云朵的左边。</div>
+</div>
 <div class="sech">云端同步（Google Drive）</div>
 <div class="card">
 <div class="syline" id="syline"></div>
@@ -190,8 +195,9 @@ details.more summary::-webkit-details-marker{display:none}
 <script>
 (function(){
 var ACC=['cash','tng','rhb'];
-var cats = ['食物', '交通', '娱乐', '运动', '学校/宿舍', '网购', '电脑', '零用', '赞助', '其他', '错误', '转账'];
-var fixedOpen = { cash: 82.45, tng: 0.00, rhb: 0.00 };
+var cats = ['食物', '交通', '娱乐', '购物', '学习', '医疗', '其他', '转账'];
+var fixedOpen = { cash: 0, bank: 0 };
+var ACC_BASIC=['cash','bank'];
 
 
 var rawDataList = [];
@@ -220,7 +226,7 @@ function esc(s){var e=document.createElement('div');e.textContent=s==null?'':s;r
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function allCats(){var s=S.cats.slice();S.entries.forEach(function(e){if(s.indexOf(e.c)<0)s.push(e.c)});return s}
 
-var CS={'食物':['🍜','#ff9f43'],'交通':['🚌','#54a0ff'],'娱乐':['🎬','#a78bfa'],'运动':['🏸','#34d399'],'学校/宿舍':['🏫','#fbbf24'],'网购':['🛍️','#f472b6'],'电脑':['💻','#22d3ee'],'零用':['👛','#2dd4bf'],'赞助':['🎁','#fb7185'],'其他':['📦','#94a3b8'],'转账':['🔁','#64748b'],'错误':['❓','#9ca3af']};
+var CS={'食物':['🍜','#ff9f43'],'交通':['🚌','#54a0ff'],'娱乐':['🎬','#a78bfa'],'运动':['🏸','#34d399'],'学校/宿舍':['🏫','#fbbf24'],'网购':['🛍️','#f472b6'],'电脑':['💻','#22d3ee'],'零用':['👛','#2dd4bf'],'赞助':['🎁','#fb7185'],'其他':['📦','#94a3b8'],'转账':['🔁','#64748b'],'错误':['❓','#9ca3af'],'购物':['🛍️','#f472b6'],'学习':['📚','#fbbf24'],'医疗':['💊','#fb7185']};
 function cs(c){return (S.cs&&S.cs[c])||CS[c]||['🏷️','#94a3b8']}
 function title(e){return (e.k&&/明细$/.test(e.n))?e.k:(e.n+(e.k?' ('+e.k+')':''))}
 
@@ -234,7 +240,7 @@ function fillSelect(el,val,hideTr){
 }
 
 function allAccts(){
-  var a=(S.accts&&S.accts.length?S.accts:ACC).slice();
+  var a=(S.accts&&S.accts.length?S.accts:ACC_BASIC).slice();
   S.entries.forEach(function(e){if(e.a&&a.indexOf(e.a)<0)a.push(e.a)});
   return a;
 }
@@ -372,6 +378,7 @@ function renderSettings(){
       '<button class="btn sm sec" data-ae="'+esc(a)+'">编辑</button><button class="btn sm sec" data-ad="'+esc(a)+'">删除</button></div>';
   });
   $('#acclist').innerHTML=ah;
+  var wi=$('#wmin');if(wi&&document.activeElement!==wi)wi.value=S.wm||'';
   $('#expn').textContent=S.entries.length+' 笔';
   renderSyncUI();
 }
@@ -508,7 +515,8 @@ var dragBtn=null,dragTimer=null,dragId=null,sx=0,sy=0,suppress=false;
   bar.addEventListener('contextmenu',function(e){e.preventDefault()});
 })();
 
-function renderAll(){renderForm();renderList();renderStats()}
+function applyWM(){var w=$('#wm');if(w)w.textContent=S.wm||''}
+function renderAll(){renderForm();renderList();renderStats();applyWM()}
 var TITLES={add:'记账',stats:'统计',list:'明细',settings:'设置'};
 function tab(t){
   ['add','stats','list','settings'].forEach(function(x){$('#p-'+x).hidden=x!==t});
@@ -698,7 +706,7 @@ function updateFile(id,body){
   return dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
     {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:body});
 }
-function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,entries:S.entries,del:S.del||{}}}
+function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,entries:S.entries,del:S.del||{}}}
 function mergeIn(P){
   if(!P||!P.entries)return;
   P.entries.forEach(function(e){if(e.c==='未知')e.c='错误'});
@@ -712,15 +720,16 @@ function mergeIn(P){
     if(!l){map[e.id]=e;order.push(e.id)}else if((e.u||e.ts)>(l.u||l.ts))map[e.id]=e});
   S.entries=order.filter(function(id){return !del[id]}).map(function(id){return map[id]});
   S.del=del;
-  if((P.catsU||0)>(S.catsU||0)){S.cats=P.cats||S.cats;S.cs=P.cs||{};S.catsU=P.catsU}
-  if((P.accU||0)>(S.accU||0)){S.accts=P.accts||S.accts;S.open=P.open||S.open;S.accU=P.accU}
+  if(P.cats&&((P.catsU||0)>(S.catsU||0)||!S.catsU)){S.cats=P.cats;S.cs=P.cs||{};S.catsU=P.catsU||0}
+  if(P.accts&&((P.accU||0)>(S.accU||0)||!S.accU)){S.accts=P.accts;S.open=P.open||S.open;S.accU=P.accU||0}
+  if(P.wmU&&P.wmU>(S.wmU||0)){S.wm=P.wm||'';S.wmU=P.wmU}
 }
 function localAhead(P){
   var m={},d=P.del||{},i,k;
   (P.entries||[]).forEach(function(e){m[e.id]=e});
   for(i=0;i<S.entries.length;i++){var e=S.entries[i],r=m[e.id];if(!r||(e.u||e.ts)>(r.u||r.ts))return true}
   for(k in (S.del||{}))if(!d[k])return true;
-  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0);
+  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0);
 }
 function sync(interactive,retried){
   if(syncing)return Promise.resolve();
@@ -844,7 +853,12 @@ if(!S.renErr){ // 旧版里的“未知”分类改名为“错误”（只做�
   if(chg)S.catsU=nowE;
   S.renErr=true;
 }
-if(!S.accts)S.accts=ACC.slice();
+$('#wmin').oninput=function(){S.wm=this.value.trim();S.wmU=Date.now();persist();applyWM()};
+if(!S.starterFix){ // 旧版默认带的初始余额（cash 82.45）：如果账本还是空的，换成新用户的初始状态（有记录的账本不会动）
+  if(!S.entries.length&&!S.accU&&S.open&&S.open.cash===82.45){S.accts=ACC_BASIC.slice();S.open={cash:0,bank:0};if(!S.catsU)S.cats=cats.slice();}
+  S.starterFix=true;
+}
+if(!S.accts)S.accts=S.entries.length?ACC.slice():ACC_BASIC.slice(); // 已有记录的老用户保持原来的三个账户；新用户只有 cash 和 bank
 applyTabOrder();
 persist(true);
 initStats();

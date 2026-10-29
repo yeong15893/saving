@@ -454,7 +454,12 @@ function trMode(){
   $('#catbox').hidden=on;$('#trbox').hidden=!on;
   $('#falbl').textContent=on?'转出账户':'账户';
 }
-function resetForm(){editId=null;$('#fn').value='';$('#fm').value='';$('#save').textContent='添加';$('#cancel').hidden=true}
+function setFormDefaults(){ // 默认：支出 / tng / 食物
+  $('#ft').value='out';$('#fa').value='tng';$('#fa2').value='cash';
+  var c=$('#fc');if([].some.call(c.options,function(o){return o.value==='食物'}))c.value='食物';
+  trMode();
+}
+function resetForm(){editId=null;$('#fn').value='';$('#fm').value='';$('#save').textContent='添加';$('#cancel').hidden=true;setFormDefaults()}
 function save(){
   var m=parseFloat($('#fm').value);
   if(!$('#fd').value||!(m>0)){$('#msg').textContent='请填写日期和大于 0 的金额';return}
@@ -733,6 +738,12 @@ window.addEventListener('offline',refreshChip);
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='visible'&&SY.connected&&navigator.onLine&&tokOK()&&Date.now()-(SY.last||0)>30000)sync(false);
 });
+var lastAuthTry=0;
+document.addEventListener('click',function(){ // 登录过期后，点任何按钮时顺便在后台重新取一次登录凭证
+  if(!SY.connected||!SY.cid||!navigator.onLine||syncing||tokOK())return;
+  var n=Date.now();if(n-lastAuthTry<90000)return;
+  lastAuthTry=n;sync(false);
+},true);
 if(navigator.onLine)loadGIS().catch(function(){});
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(function(){});
 
@@ -760,6 +771,7 @@ persist(true);
 initStats();
 $('#fd').value=ymd(new Date());
 renderAll();
+setFormDefaults();
 refreshChip();
 })();
 </script>

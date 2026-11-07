@@ -48,6 +48,15 @@ input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-ra
 .dtitle{font-weight:700;margin-bottom:8px}
 .dtext{font-size:14px;line-height:1.6;margin-bottom:6px}
 .drow{display:flex;gap:8px;margin-top:14px}.drow .btn{flex:1}
+.ls2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ls2>div{background:rgba(255,255,255,.05);border-radius:12px;padding:12px;text-align:center}
+.ls2 small{display:block;color:var(--mut);font-size:12px;margin-bottom:4px}.ls2 b{font-size:18px}
+.lh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lbig{font-size:22px;font-weight:800;margin:6px 0 2px}.lsm{color:var(--mut);font-size:13px}
+.lact{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.ltag{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut);margin-left:6px;font-weight:400}
+.lev{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:13px}
+.lev div{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
 .crow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .crow:first-of-type{border-top:0}
 .crow .nm{flex:1;min-width:0;font-weight:600}
@@ -159,6 +168,14 @@ details.more summary::-webkit-details-marker{display:none}
 <div id="lst"></div>
 </section>
 
+<section id="p-loans" hidden>
+<div class="card">
+<div class="lh" style="margin-bottom:10px"><b>借还款</b><button id="eyebtn2" class="eye" type="button" aria-label="显示/隐藏金额"></button></div>
+<div class="ls2"><div><small>别人欠我</small><b id="owedme">RM ••••</b></div><div><small>我欠别人</small><b id="iowe">RM ••••</b></div></div>
+</div>
+<button class="btn" id="newloan" type="button" style="width:100%;margin-bottom:12px">＋ 新增借款</button>
+<div id="loanlist"></div>
+</section>
 <section id="p-settings" hidden>
 <div class="sech">快捷项目</div>
 <div class="card">
@@ -210,6 +227,7 @@ details.more summary::-webkit-details-marker{display:none}
 <button role="tab" data-t="add" aria-selected="true"><span>✏️</span>记账</button>
 <button role="tab" data-t="list" aria-selected="false"><span>🕘</span>明细</button>
 <button role="tab" data-t="stats" aria-selected="false"><span>📊</span>统计</button>
+<button role="tab" data-t="loans" aria-selected="false"><span>🤝</span>借还款</button>
 <button role="tab" data-t="settings" aria-selected="false"><span>⚙️</span>设置</button>
 </nav>
 
@@ -247,7 +265,7 @@ function esc(s){var e=document.createElement('div');e.textContent=s==null?'':s;r
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function allCats(){var s=S.cats.slice();S.entries.forEach(function(e){if(s.indexOf(e.c)<0)s.push(e.c)});return s}
 
-var CS={'食物':['🍜','#ff9f43'],'交通':['🚌','#54a0ff'],'娱乐':['🎬','#a78bfa'],'运动':['🏸','#34d399'],'学校/宿舍':['🏫','#fbbf24'],'网购':['🛍️','#f472b6'],'电脑':['💻','#22d3ee'],'零用':['👛','#2dd4bf'],'赞助':['🎁','#fb7185'],'其他':['📦','#94a3b8'],'转账':['🔁','#64748b'],'错误':['❓','#9ca3af'],'购物':['🛍️','#f472b6'],'学习':['📚','#fbbf24'],'医疗':['💊','#fb7185']};
+var CS={'借还款':['🤝','#a78bfa'],'食物':['🍜','#ff9f43'],'交通':['🚌','#54a0ff'],'娱乐':['🎬','#a78bfa'],'运动':['🏸','#34d399'],'学校/宿舍':['🏫','#fbbf24'],'网购':['🛍️','#f472b6'],'电脑':['💻','#22d3ee'],'零用':['👛','#2dd4bf'],'赞助':['🎁','#fb7185'],'其他':['📦','#94a3b8'],'转账':['🔁','#64748b'],'错误':['❓','#9ca3af'],'购物':['🛍️','#f472b6'],'学习':['📚','#fbbf24'],'医疗':['💊','#fb7185']};
 function cs(c){return (S.cs&&S.cs[c])||CS[c]||['🏷️','#94a3b8']}
 function title(e){return (e.k&&/明细$/.test(e.n))?e.k:(e.n+(e.k?' ('+e.k+')':''))}
 
@@ -256,7 +274,7 @@ function persist(quiet){try{localStorage.setItem('ledger-v14',JSON.stringify(S))
   if(!quiet&&typeof markDirty==='function')markDirty()}
 
 function fillSelect(el,val,hideTr){
-  var h='';allCats().forEach(function(c){if(hideTr&&c==='转账'&&c!==val)return;h+='<option>'+esc(c)+'</option>'});
+  var h='';allCats().forEach(function(c){if(hideTr&&isSys(c)&&c!==val)return;h+='<option>'+esc(c)+'</option>'});
   el.innerHTML=h;el.value=val||'';if(!val)el.selectedIndex=0;
 }
 
@@ -315,20 +333,20 @@ function renderList(){
   var ch='<button class="chip'+(F.cat===''?' on':'')+'" data-cat="">全部</button>';
   allCats().forEach(function(c){ch+='<button class="chip'+(F.cat===c?' on':'')+'" data-cat="'+esc(c)+'">'+cs(c)[0]+' '+esc(c)+'</button>'});
   $('#cchips').innerHTML=ch;
-  var rows=filtered(),i=0,o=0,tc=0,showT=(F.cat==='转账');
-  rows.forEach(function(e){if(e.c==='转账'){tc++;if(!showT)return}if(e.t==='in')i+=e.m;else o+=e.m});
-  $('#lsum').innerHTML=showT?'共 '+rows.length+' 笔转账 · 转入 +RM '+fmt(i)+' · 转出 −RM '+fmt(o)+'（账户之间的转账，不算收入和支出）':
-    '共 '+rows.length+' 笔'+(tc?'（含 '+tc+' 笔转账，不计入）':'')+' · 收入 <b class="in">+RM '+fmt(i)+'</b> · 支出 <b class="out">−RM '+fmt(o)+'</b>';
+  var rows=filtered(),i=0,o=0,tc=0,showT=isSys(F.cat);
+  rows.forEach(function(e){if(isSys(e.c)){tc++;if(!showT)return}if(e.t==='in')i+=e.m;else o+=e.m});
+  $('#lsum').innerHTML=showT?(F.cat==='借还款'?'共 '+rows.length+' 笔借还款 · 钱进来 +RM '+fmt(i)+' · 钱出去 −RM '+fmt(o)+'（借还款不算收入和支出）':'共 '+rows.length+' 笔转账 · 转入 +RM '+fmt(i)+' · 转出 −RM '+fmt(o)+'（账户之间的转账，不算收入和支出）'):
+    '共 '+rows.length+' 笔'+(tc?'（含 '+tc+' 笔转账/借还款，不计入）':'')+' · 收入 <b class="in">+RM '+fmt(i)+'</b> · 支出 <b class="out">−RM '+fmt(o)+'</b>';
   if(!rows.length){$('#lst').innerHTML='<div class="empty">没有符合条件的记录</div>';return}
   var html='',cur=null,buf='',di=0,dout=0;
   function flush(){
     if(cur===null)return;
-    var t='';if(di)t+='<i class="in">+RM '+fmt(di)+'</i>';if(dout||(!di&&buf.indexOf('转账')<0))t+='<i class="out">−RM '+fmt(dout)+'</i>';else if(!di)t+='<i style="color:var(--mut)">仅转账</i>';
+    var t='';if(di)t+='<i class="in">+RM '+fmt(di)+'</i>';if(dout||(!di&&buf.indexOf('转账')<0&&buf.indexOf('借还款')<0))t+='<i class="out">−RM '+fmt(dout)+'</i>';else if(!di)t+='<i style="color:var(--mut)">仅转账/借还款</i>';
     html+='<div class="gh"><span>'+dlabel(cur)+'</span><span class="gt">'+t+'</span></div><div class="grp">'+buf+'</div>';
   }
   rows.forEach(function(e){
     if(e.d!==cur){flush();cur=e.d;buf='';di=0;dout=0}
-    var isT=e.c==='转账';
+    var isT=isSys(e.c);
     if(!isT||showT){if(e.t==='in')di+=e.m;else dout+=e.m}
     var st=cs(e.c);
     buf+='<div class="li"><div class="lm"><div class="ic" style="background:'+st[1]+'2e">'+st[0]+'</div>'+
@@ -351,7 +369,7 @@ function renderStats(){
   for(k=0;k<nb;k++){bars.push(0);labels.push(m?'第'+(k+1)+'周':(k+1)+'月')}
   var out=0,inc=0,pout=0,by={};
   S.entries.forEach(function(e){
-    if(e.c==='转账')return;
+    if(isSys(e.c))return;
     if(e.d.indexOf(pre)===0){
       if(e.t==='out'){out+=e.m;by[e.c]=(by[e.c]||0)+e.m;bars[m?Math.floor((+e.d.slice(8,10)-1)/7):(+e.d.slice(5,7)-1)]+=e.m}
       else inc+=e.m;
@@ -388,7 +406,7 @@ function catCount(c){var n=0;S.entries.forEach(function(e){if(e.c===c)n++});retu
 function renderSettings(){
   var h='';
   allCats().forEach(function(c){
-    var st=cs(c),n=catCount(c),lock=(c==='转账');
+    var st=cs(c),n=catCount(c),lock=isSys(c);
     h+='<div class="crow"><div class="ic" style="background:'+st[1]+'2e">'+st[0]+'</div><div class="nm">'+esc(c)+'<small>'+n+' 笔</small></div>'+
       (lock?'<small style="color:var(--mut)">系统分类</small>':'<button class="btn sm sec" data-ce="'+esc(c)+'">编辑</button><button class="btn sm sec" data-cd="'+esc(c)+'">删除</button>')+'</div>';
   });
@@ -440,12 +458,95 @@ function delCat(c){
     persist();renderAll();renderSettings();
   });
 }
+/* ---------- 借还款 ---------- */
+var LOANOPEN={};
+function loanList(){return S.loans||[]}
+function loanStat(L){
+  var p=0,r=0;
+  S.entries.forEach(function(e){if(e.l===L.id){if(e.lk==='p')p+=e.m;else r+=e.m}});
+  return {p:p,r:r,left:Math.round((p-r)*100)/100};
+}
+function loanLast(L){var t=L.u||0;S.entries.forEach(function(e){if(e.l===L.id&&(e.ts||0)>t)t=e.ts});return t}
+function addLoanEntry(L,kind,m,acct,date){
+  var now=Date.now(),t=(L.dir==='out')===(kind==='p')?'out':'in';
+  var n=kind==='p'?(L.dir==='out'?'借给 '+L.who:'向 '+L.who+' 借入'):(L.dir==='out'?L.who+' 还款':'还款给 '+L.who);
+  S.entries.push({id:uid(),ts:now,u:now,d:date,c:'借还款',n:n,t:t,a:acct,m:Math.round(m*100)/100,k:'',l:L.id,lk:kind});
+}
+function mk(v){return HIDE?'••••':fmt(v)}
+function renderLoans(){
+  var el=$('#loanlist');if(!el)return;
+  var L=loanList().slice().sort(function(a,b){return loanLast(b)-loanLast(a)}),me=0,you=0,open=[],done=[];
+  L.forEach(function(l){var st=loanStat(l);if(st.left>0.004){open.push([l,st]);if(l.dir==='out')me+=st.left;else you+=st.left}else done.push([l,st])});
+  $('#owedme').textContent='RM '+mk(me);$('#iowe').textContent='RM '+mk(you);
+  $('#eyebtn2').innerHTML=eyeSVG(!HIDE);
+  function card(l,st,isDone){
+    var out=l.dir==='out',h='<div class="card" style="'+(isDone?'opacity:.7':'')+'"><div class="lh"><b>'+esc(l.who)+'<span class="ltag">'+(out?'借出':'借入')+'</span></b></div>';
+    h+='<div class="lbig" style="color:'+(isDone?'var(--mut)':out?'var(--in)':'var(--out)')+'">'+(isDone?'已还清':(out?'对方还欠你 RM ':'你还欠对方 RM ')+mk(st.left))+'</div>';
+    h+='<div class="lsm">共 RM '+mk(st.p)+' · 已还 RM '+mk(st.r)+'</div>';
+    h+='<div class="lact">'+(isDone?'':'<button class="btn sm" data-lr="'+esc(l.id)+'">'+(out?'收到还款':'我还款')+'</button>')+
+       '<button class="btn sm sec" data-la="'+esc(l.id)+'">'+(out?'再借出':'再借入')+'</button><button class="btn sm sec" data-lv="'+esc(l.id)+'">记录</button><button class="btn sm sec" data-ld="'+esc(l.id)+'">删除</button></div>';
+    if(LOANOPEN[l.id]){
+      var ev=S.entries.filter(function(e){return e.l===l.id}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:(a.ts-b.ts)});
+      h+='<div class="lev">'+ev.map(function(e){return '<div><span>'+e.d.slice(5)+' · '+esc(e.n)+' · '+esc(e.a)+'</span><span class="'+(e.t==='in'?'in':'out')+'">'+(e.t==='in'?'+':'−')+(HIDE?'••••':amt(e.m))+'</span></div>'}).join('')+'</div>';
+    }
+    return h+'</div>';
+  }
+  var h='';
+  if(!open.length&&!done.length)h='<div class="empty">还没有借还款记录。点上面的“新增借款”开始。</div>';
+  open.forEach(function(x){h+=card(x[0],x[1],false)});
+  if(done.length){h+='<div class="sech">已还清</div>';done.forEach(function(x){h+=card(x[0],x[1],true)})}
+  el.innerHTML=h;
+}
+function acctOpts(){return allAccts().map(function(a){return [a,a]})}
+function newLoan(){
+  var accs=allAccts();
+  dlg({title:'新增借款',fields:[
+    {label:'对方名字',value:''},
+    {label:'类型',value:'out',opts:[['out','我借出给别人（别人欠我）'],['in','我向别人借入（我欠别人）']]},
+    {label:'金额（RM）',value:'',num:true},
+    {label:'账户（钱从哪个账户出去，或进到哪个账户）',value:accs.indexOf('tng')>=0?'tng':accs[0],opts:acctOpts()},
+    {label:'日期',value:$('#fd').value||ymd(new Date()),date:true}
+  ]},function(v){
+    var who=v[0].trim(),m=parseFloat(v[2]);
+    if(!who){dlgAlert('请填对方的名字');return}
+    if(!(m>0)){dlgAlert('金额要大于 0');return}
+    var L={id:'l'+uid(),who:who,dir:v[1],u:Date.now()};
+    S.loans=loanList().concat([L]);addLoanEntry(L,'p',m,v[3],v[4]||ymd(new Date()));
+    persist();renderAll();renderLoans();
+  });
+}
+function loanMove(id,kind){
+  var L=loanList().filter(function(x){return x.id===id})[0];if(!L)return;
+  var st=loanStat(L),accs=allAccts(),out=L.dir==='out';
+  dlg({title:kind==='r'?(out?'收到还款：':'我还款给：')+L.who:(out?'再借出给：':'再向他借入：')+L.who,
+    text:kind==='r'?'目前还欠 RM '+fmt(st.left):'',
+    fields:[{label:'金额（RM）',value:kind==='r'?st.left:'',num:true},
+      {label:'账户',value:accs.indexOf('tng')>=0?'tng':accs[0],opts:acctOpts()},
+      {label:'日期',value:$('#fd').value||ymd(new Date()),date:true}]},function(v){
+    var m=parseFloat(v[0]);
+    if(!(m>0)){dlgAlert('金额要大于 0');return}
+    if(kind==='r'&&m>st.left+0.005){dlgAlert('还款金额不能超过目前欠的 RM '+fmt(st.left));return}
+    addLoanEntry(L,kind,m,v[1],v[2]||ymd(new Date()));L.u=Date.now();
+    persist();renderAll();renderLoans();
+  });
+}
+function delLoan(id){
+  var L=loanList().filter(function(x){return x.id===id})[0];if(!L)return;
+  dlgConfirm('确定删除和「'+L.who+'」的这笔借还款？相关的所有进出账记录也会一起删除，账户余额会回到没记之前的样子。',function(){
+    var now=Date.now();S.del=S.del||{};S.loanDel=S.loanDel||{};
+    S.entries.forEach(function(e){if(e.l===id)S.del[e.id]=now});
+    S.entries=S.entries.filter(function(e){return e.l!==id});
+    S.loans=loanList().filter(function(x){return x.id!==id});S.loanDel[id]=now;
+    persist();renderAll();renderLoans();
+  });
+}
+
 /* ---------- 预算 ---------- */
 function bud(){return S.budget||{total:0,cats:{}}}
 function bcolor(p){return p>1?'#f87171':p>=0.8?'#fbbf24':'#58b98c'}
 function spendOf(pre){
   var out=0,by={};
-  S.entries.forEach(function(e){if(e.t==='out'&&e.c!=='转账'&&e.d.indexOf(pre)===0){out+=e.m;by[e.c]=(by[e.c]||0)+e.m}});
+  S.entries.forEach(function(e){if(e.t==='out'&&!isSys(e.c)&&e.d.indexOf(pre)===0){out+=e.m;by[e.c]=(by[e.c]||0)+e.m}});
   return {out:out,by:by};
 }
 function budRow(label,icon,color,spent,limit){
@@ -476,7 +577,7 @@ function renderBudgetCard(){
   var el=$('#budgetcard');if(!el)return;
   var b=bud();
   el.innerHTML='<div class="crow"><div class="ic" style="background:#58b98c2e">🎯</div><div class="nm">每月总预算<small>'+(b.total>0?'RM '+fmt(b.total):'未设置')+'</small></div><button class="btn sm sec" data-bs="">设置</button></div>'+
-    '<div class="st">只算支出，转账不算，每月 1 号重新开始。超过 80% 会变黄，超过 100% 会变红。填 0 表示不设预算。</div>';
+    '<div class="st">只算支出，转账和借还款不算，每月 1 号重新开始。超过 80% 会变黄，超过 100% 会变红。填 0 表示不设预算。</div>';
 }
 function setBudget(key){
   var b=bud(),cur=key===''?(b.total||0):((b.cats&&b.cats[key])||0);
@@ -493,10 +594,14 @@ function dlg(o,cb){
   var old=$('#dlg');if(old)old.remove();
   var w=document.createElement('div');w.id='dlg';w.className='dlg';
   var h='<div class="dbox">'+(o.title?'<div class="dtitle">'+esc(o.title)+'</div>':'')+(o.text?'<div class="dtext">'+esc(o.text).replace(/\n/g,'<br>')+'</div>':'');
-  (o.fields||[]).forEach(function(f,i){h+='<label>'+esc(f.label)+'</label><input data-f="'+i+'" value="'+esc(f.value==null?'':f.value)+'"'+(f.num?' inputmode="decimal"':'')+' autocomplete="off">'});
+  (o.fields||[]).forEach(function(f,i){
+    h+='<label>'+esc(f.label)+'</label>';
+    if(f.opts){h+='<select data-f="'+i+'">'+f.opts.map(function(x){return '<option value="'+esc(x[0])+'"'+(x[0]===f.value?' selected':'')+'>'+esc(x[1])+'</option>'}).join('')+'</select>'}
+    else h+='<input data-f="'+i+'"'+(f.date?' type="date"':'')+' value="'+esc(f.value==null?'':f.value)+'"'+(f.num?' inputmode="decimal"':'')+' autocomplete="off">';
+  });
   h+='<div class="drow">'+(o.noCancel?'':'<button type="button" class="btn sec" data-dc>取消</button>')+'<button type="button" class="btn" data-dok>'+esc(o.ok||'确定')+'</button></div></div>';
   w.innerHTML=h;document.body.appendChild(w);
-  var ins=w.querySelectorAll('input');if(ins[0])ins[0].focus();
+  var ins=w.querySelectorAll('input,select');if(ins[0])ins[0].focus();
   function done(){var v=[].map.call(ins,function(x){return x.value});w.remove();if(cb)cb(v)}
   w.addEventListener('click',function(e){
     if(e.target===w||e.target.closest('[data-dc]')){w.remove();return}
@@ -569,6 +674,7 @@ function delQuick(id){
   });
 }
 
+function isSys(c){return c==='转账'||c==='借还款'}
 function accTouch(){S.accU=Date.now()}
 function addAcc(){
   var n=$('#nan').value.trim(),o=parseFloat($('#nao').value)||0,m=$('#accmsg');
@@ -617,7 +723,7 @@ function exportCSV(){
 }
 
 /* ---------- 底部标签：长按拖动排序 ---------- */
-var DEF_TABS=['add','list','stats','settings'];
+var DEF_TABS=['add','list','stats','loans','settings'];
 function tabOrder(){
   var o=(S.tabOrder||[]).filter(function(x){return DEF_TABS.indexOf(x)>=0});
   DEF_TABS.forEach(function(x){if(o.indexOf(x)<0)o.push(x)});return o;
@@ -681,12 +787,12 @@ var dragBtn=null,dragTimer=null,dragId=null,sx=0,sy=0,suppress=false;
 
 function applyWM(){var w=$('#wm');if(w)w.textContent=S.wm||''}
 function renderAll(){renderForm();renderList();renderStats();applyWM();renderQuick();renderBudgetBar()}
-var TITLES={add:'记账',stats:'统计',list:'明细',settings:'设置'};
+var TITLES={add:'记账',stats:'统计',list:'明细',settings:'设置',loans:'借还款'};
 function tab(t){
-  ['add','stats','list','settings'].forEach(function(x){$('#p-'+x).hidden=x!==t});
+  ['add','stats','list','loans','settings'].forEach(function(x){$('#p-'+x).hidden=x!==t});
   document.querySelectorAll('.tabbar button').forEach(function(b){b.setAttribute('aria-selected',b.dataset.t===t)});
   $('#ttl').textContent=TITLES[t];
-  if(t==='list')renderList();if(t==='stats')renderStats();if(t==='add')renderForm();if(t==='settings')renderSettings();
+  if(t==='list')renderList();if(t==='stats')renderStats();if(t==='add')renderForm();if(t==='settings')renderSettings();if(t==='loans')renderLoans();
   window.scrollTo(0,0);
 }
 function trMode(){
@@ -733,12 +839,18 @@ function range(r){
 
 document.addEventListener('click',function(ev){
   var t=ev.target,el;
-  if(t.closest('#eyebtn')){HIDE=!HIDE;renderForm();renderBudgetBar();return}
+  if(t.closest('#eyebtn')){HIDE=!HIDE;renderForm();renderBudgetBar();renderLoans();return}
   if(t.closest('#toastundo')){var uf=TOAST_UNDO;TOAST_UNDO=null;$('#toast').hidden=true;if(uf)uf();return}
   if((el=t.closest('[data-q]')))return useQuick(el.dataset.q);
   if(t.closest('#saveq'))return saveQuick();
   if((el=t.closest('[data-qe]')))return editQuick(el.dataset.qe);
   if((el=t.closest('[data-qd]')))return delQuick(el.dataset.qd);
+  if(t.closest('#eyebtn2')){HIDE=!HIDE;renderForm();renderBudgetBar();renderLoans();return}
+  if(t.closest('#newloan'))return newLoan();
+  if((el=t.closest('[data-lr]')))return loanMove(el.dataset.lr,'r');
+  if((el=t.closest('[data-la]')))return loanMove(el.dataset.la,'p');
+  if((el=t.closest('[data-lv]'))){LOANOPEN[el.dataset.lv]=!LOANOPEN[el.dataset.lv];return renderLoans()}
+  if((el=t.closest('[data-ld]')))return delLoan(el.dataset.ld);
   if((el=t.closest('[data-bs]')))return setBudget(el.dataset.bs);
   if((el=t.closest('[data-ae]')))return editAcc(el.dataset.ae);
   if((el=t.closest('[data-ad]')))return delAcc(el.dataset.ad);
@@ -774,7 +886,7 @@ document.addEventListener('click',function(ev){
   if((el=t.closest('[data-e]'))){
     var e=S.entries.filter(function(x){return x.id===el.dataset.e})[0];if(!e)return;
     editId=e.id;tab('add');renderForm();
-    $('#fd').value=e.d;if(e.c==='转账'){var op=document.createElement('option');op.textContent='转账';$('#fc').appendChild(op)}$('#fc').value=e.c;$('#fn').value=title(e);$('#ft').value=e.t;$('#fa').value=e.a;$('#fm').value=e.m;trMode();
+    $('#fd').value=e.d;if(isSys(e.c)){var op=document.createElement('option');op.textContent=e.c;$('#fc').appendChild(op)}$('#fc').value=e.c;$('#fn').value=title(e);$('#ft').value=e.t;$('#fa').value=e.a;$('#fm').value=e.m;trMode();
     $('#save').textContent='保存修改';$('#cancel').hidden=false;$('#msg').textContent='';return;
   }
   if((el=t.closest('[data-x]'))){
@@ -876,7 +988,7 @@ function updateFile(id,body){
   return dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
     {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:body});
 }
-function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,quick:quickList(),quickU:S.quickU||0,budget:bud(),budgetU:S.budgetU||0,entries:S.entries,del:S.del||{}}}
+function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,quick:quickList(),quickU:S.quickU||0,budget:bud(),budgetU:S.budgetU||0,loans:loanList(),loanDel:S.loanDel||{},entries:S.entries,del:S.del||{}}}
 function mergeIn(P){
   if(!P||!P.entries)return;
   P.entries.forEach(function(e){if(e.c==='未知')e.c='错误'});
@@ -895,13 +1007,25 @@ function mergeIn(P){
   if(P.wmU&&P.wmU>(S.wmU||0)){S.wm=P.wm||'';S.wmU=P.wmU}
   if(P.quick&&(P.quickU||0)>(S.quickU||0)){S.quick=P.quick;S.quickU=P.quickU}
   if(P.budget&&(P.budgetU||0)>(S.budgetU||0)){S.budget=P.budget;S.budgetU=P.budgetU}
+  var ld=Object.assign({},S.loanDel||{}),lm={},lo=[];
+  for(k in (P.loanDel||{}))ld[k]=Math.max(ld[k]||0,P.loanDel[k]);
+  loanList().forEach(function(l){lm[l.id]=l;lo.push(l.id)});
+  (P.loans||[]).forEach(function(l){var x=lm[l.id];if(!x){lm[l.id]=l;lo.push(l.id)}else if((l.u||0)>(x.u||0))lm[l.id]=l});
+  S.loans=lo.filter(function(id){return !ld[id]}).map(function(id){return lm[id]});S.loanDel=ld;
+}
+function loansAhead(P){
+  var m={},d=P.loanDel||{},i,k,L=loanList();
+  (P.loans||[]).forEach(function(l){m[l.id]=l});
+  for(i=0;i<L.length;i++){var r=m[L[i].id];if(!r||(L[i].u||0)>(r.u||0))return true}
+  for(k in (S.loanDel||{}))if(!d[k])return true;
+  return false;
 }
 function localAhead(P){
   var m={},d=P.del||{},i,k;
   (P.entries||[]).forEach(function(e){m[e.id]=e});
   for(i=0;i<S.entries.length;i++){var e=S.entries[i],r=m[e.id];if(!r||(e.u||e.ts)>(r.u||r.ts))return true}
   for(k in (S.del||{}))if(!d[k])return true;
-  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0)||(S.budgetU||0)>(P.budgetU||0);
+  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0)||(S.budgetU||0)>(P.budgetU||0)||loansAhead(P);
 }
 function sync(interactive,retried){
   if(syncing)return Promise.resolve();

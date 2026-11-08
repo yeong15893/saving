@@ -218,7 +218,7 @@ details.more summary::-webkit-details-marker{display:none}
 <div class="card">
 <div id="remlist"></div>
 <button class="btn sm sec" id="newrem" type="button" style="margin-top:8px">＋ 新增提醒</button>
-<div class="st">网页没打开的时候不能弹通知，所以到期的提醒会在你下次打开应用时，显示在记账页最上面。点“记一笔”会帮你填好分类、账户和日期，你只要输入金额（比如电话费）。</div>
+<div class="st">网页没打开的时候不能弹通知，所以到期的提醒会在你下次打开应用时，显示在记账页最上面。点“记一笔”就直接记好：设了金额的（比如电话费）一下就记好，6 秒内可以撤销；没设金额的会弹出一个小窗，你填金额就行。</div>
 </div>
 <div class="sech">最近删除</div>
 <div class="card" id="trashcard"></div>
@@ -487,11 +487,12 @@ function remPending(){
   var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),done=S.remDone||{},out=[];
   remList().forEach(function(r){
     var due=lastDue(r,today),ds=ymd(due),key=r.id+'|'+ds;
-    if(ds>=(r.from||'0000-00-00')&&!done[key])out.push({r:r,key:key,ds:ds,due:due});
+    if(ds>=(r.from||'0000-00-00')&&!(done[key]>0))out.push({r:r,key:key,ds:ds,due:due});
   });
   return out;
 }
 function remMark(key){S.remDone=S.remDone||{};S.remDone[key]=Date.now()}
+function remUnmark(key){S.remDone=S.remDone||{};S.remDone[key]=-Date.now()}
 function renderRem(){
   var el=$('#remcards');if(!el)return;
   var P=remPending();
@@ -500,14 +501,22 @@ function renderRem(){
       '<div style="display:flex;gap:8px"><button class="btn sm" type="button" data-rf="'+esc(x.key)+'">记一笔</button><button class="btn sm sec" type="button" data-rs="'+esc(x.key)+'">跳过</button></div></div></div>';
   }).join('');
 }
+function remRecord(x,m){
+  var r=x.r,now=Date.now(),e={id:uid(),ts:now,u:now,d:x.ds,c:r.c,n:r.n,t:r.t,a:r.a,m:Math.round(m*100)/100,k:''};
+  S.entries.push(e);remMark(x.key);persist();renderAll();
+  toast('已记：'+r.n+' '+(r.t==='in'?'+':'−')+'RM '+money(m)+'（'+r.a+'）',function(){
+    S.entries=S.entries.filter(function(y){return y.id!==e.id});S.del=S.del||{};S.del[e.id]=Date.now();
+    remUnmark(x.key);persist();renderAll();
+  });
+}
 function remFill(key){
   var x=remPending().filter(function(p){return p.key===key})[0];if(!x)return;
-  var r=x.r,fc=$('#fc');
-  $('#ft').value=r.t;
-  if([].some.call($('#fa').options,function(o){return o.value===r.a}))$('#fa').value=r.a;
-  if(![].some.call(fc.options,function(o){return o.value===r.c})){var op=document.createElement('option');op.textContent=r.c;fc.appendChild(op)}
-  fc.value=r.c;$('#fn').value=r.n;$('#fd').value=x.ds;$('#fm').value=r.m>0?r.m:'';trMode();
-  REMFILL=key;$('#fm').focus();$('#msg').textContent=r.m>0?'金额已经填好，确认后点“添加”':'填上金额，点“添加”就记好了';
+  if(x.r.m>0){remRecord(x,x.r.m);return}
+  dlg({title:x.r.n+' · '+(x.due.getMonth()+1)+'月'+x.due.getDate()+'日',text:'这次是多少？填好金额就直接记进账本。',fields:[{label:'金额（RM）',value:'',num:true}],ok:'记账'},function(v){
+    var m=parseFloat(v[0]);
+    if(!(m>0)){dlgAlert('金额要大于 0');return}
+    remRecord(x,m);
+  });
 }
 var WKN=['日','一','二','三','四','五','六'];
 function remWhen(r){return r.f==='m'?'每月 '+r.k+' 号':r.f==='w'?'每周'+WKN[r.k]:'每年 '+r.mm+' 月 '+r.dd+' 日'}
@@ -1155,7 +1164,7 @@ function mergeIn(P){
   S.loans=lo.filter(function(id){return !ld[id]}).map(function(id){return lm[id]});S.loanDel=ld;
   var rd=Object.assign({},S.remDel||{}),rmap={},ro=[],dn=Object.assign({},S.remDone||{});
   for(k in (P.remDel||{}))rd[k]=Math.max(rd[k]||0,P.remDel[k]);
-  for(k in (P.remDone||{}))dn[k]=Math.max(dn[k]||0,P.remDone[k]);
+  for(k in (P.remDone||{})){var da=dn[k]||0,db=P.remDone[k];dn[k]=Math.abs(db)>Math.abs(da)?db:da}
   remList().forEach(function(l){rmap[l.id]=l;ro.push(l.id)});
   (P.rem||[]).forEach(function(l){var x=rmap[l.id];if(!x){rmap[l.id]=l;ro.push(l.id)}else if((l.u||0)>(x.u||0))rmap[l.id]=l});
   S.rem=ro.filter(function(id){return !rd[id]}).map(function(id){return rmap[id]});S.remDel=rd;S.remDone=dn;
@@ -1165,7 +1174,7 @@ function remAhead(P){
   (P.rem||[]).forEach(function(l){m[l.id]=l});
   for(i=0;i<L.length;i++){var r=m[L[i].id];if(!r||(L[i].u||0)>(r.u||0))return true}
   for(k in (S.remDel||{}))if(!d[k])return true;
-  for(k in (S.remDone||{}))if(!dn[k])return true;
+  for(k in (S.remDone||{}))if(!(k in dn)||Math.abs(S.remDone[k])>Math.abs(dn[k]))return true;
   return false;
 }
 function loansAhead(P){

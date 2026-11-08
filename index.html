@@ -125,6 +125,7 @@ details.more summary::-webkit-details-marker{display:none}
 <h1 id="ttl">记账</h1>
 
 <section id="p-add">
+<div id="remcards"></div>
 <div class="card" style="background:linear-gradient(135deg,#162438 0%,#1e112a 100%);border:1px solid rgba(255,255,255,0.08);">
   <div style="font-size:13px;color:rgba(255,255,255,0.7);">当前总资产余额</div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 14px">
@@ -213,6 +214,14 @@ details.more summary::-webkit-details-marker{display:none}
 <div class="row" style="margin-top:8px"><button class="btn sec" id="sydis">断开连接</button></div>
 <div class="st">账本会存成你 Drive 里的“记账本数据.json”。离线照常记账，联网后点右上角的云朵同步。</div>
 </div>
+<div class="sech">提醒</div>
+<div class="card">
+<div id="remlist"></div>
+<button class="btn sm sec" id="newrem" type="button" style="margin-top:8px">＋ 新增提醒</button>
+<div class="st">网页没打开的时候不能弹通知，所以到期的提醒会在你下次打开应用时，显示在记账页最上面。点“记一笔”会帮你填好分类、账户和日期，你只要输入金额（比如电话费）。</div>
+</div>
+<div class="sech">最近删除</div>
+<div class="card" id="trashcard"></div>
 <div class="sech">数据管理</div>
 <div class="card">
 <div class="crow"><div class="ic" style="background:#a78bfa2e">💾</div><div class="nm">备份 / 恢复<small>JSON</small></div><button class="btn sm sec" id="expjson">导出</button><button class="btn sm sec" id="impjson">导入</button><input type="file" id="impfile" accept=".json,application/json" hidden></div>
@@ -418,7 +427,7 @@ function renderSettings(){
       '<button class="btn sm sec" data-ae="'+esc(a)+'">编辑</button><button class="btn sm sec" data-ad="'+esc(a)+'">删除</button></div>';
   });
   $('#acclist').innerHTML=ah;
-  renderQuickList();renderBudgetCard();
+  renderQuickList();renderBudgetCard();renderRemList();renderTrash();
   var wi=$('#wmin');if(wi&&document.activeElement!==wi)wi.value=S.wm||'';
   $('#expn').textContent=S.entries.length+' 笔';
   renderSyncUI();
@@ -458,6 +467,121 @@ function delCat(c){
     persist();renderAll();renderSettings();
   });
 }
+/* ---------- 提醒 ---------- */
+var REMFILL=null;
+function remList(){return S.rem||[]}
+function dim(y,m){return new Date(y,m+1,0).getDate()}
+function lastDue(r,today){
+  var y=today.getFullYear(),m=today.getMonth(),c;
+  if(r.f==='m'){
+    c=new Date(y,m,Math.min(r.k,dim(y,m)));
+    if(c>today){var pm=m-1,py=y;if(pm<0){pm=11;py--}c=new Date(py,pm,Math.min(r.k,dim(py,pm)))}
+    return c;
+  }
+  if(r.f==='w'){return new Date(y,m,today.getDate()-((today.getDay()-r.k+7)%7))}
+  c=new Date(y,r.mm-1,Math.min(r.dd,dim(y,r.mm-1)));
+  if(c>today)c=new Date(y-1,r.mm-1,Math.min(r.dd,dim(y-1,r.mm-1)));
+  return c;
+}
+function remPending(){
+  var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),done=S.remDone||{},out=[];
+  remList().forEach(function(r){
+    var due=lastDue(r,today),ds=ymd(due),key=r.id+'|'+ds;
+    if(ds>=(r.from||'0000-00-00')&&!done[key])out.push({r:r,key:key,ds:ds,due:due});
+  });
+  return out;
+}
+function remMark(key){S.remDone=S.remDone||{};S.remDone[key]=Date.now()}
+function renderRem(){
+  var el=$('#remcards');if(!el)return;
+  var P=remPending();
+  el.innerHTML=P.map(function(x){
+    return '<div class="card" style="padding:12px 16px;border-color:rgba(251,191,36,.5)"><div class="lh"><div><b>🔔 '+esc(x.r.n)+'</b><div class="lsm">'+(x.due.getMonth()+1)+'月'+x.due.getDate()+'日到期 · '+(x.r.t==='in'?'收入':'支出')+' · '+esc(x.r.a)+(x.r.m>0?' · RM '+fmt(x.r.m):'')+'</div></div>'+
+      '<div style="display:flex;gap:8px"><button class="btn sm" type="button" data-rf="'+esc(x.key)+'">记一笔</button><button class="btn sm sec" type="button" data-rs="'+esc(x.key)+'">跳过</button></div></div></div>';
+  }).join('');
+}
+function remFill(key){
+  var x=remPending().filter(function(p){return p.key===key})[0];if(!x)return;
+  var r=x.r,fc=$('#fc');
+  $('#ft').value=r.t;
+  if([].some.call($('#fa').options,function(o){return o.value===r.a}))$('#fa').value=r.a;
+  if(![].some.call(fc.options,function(o){return o.value===r.c})){var op=document.createElement('option');op.textContent=r.c;fc.appendChild(op)}
+  fc.value=r.c;$('#fn').value=r.n;$('#fd').value=x.ds;$('#fm').value=r.m>0?r.m:'';trMode();
+  REMFILL=key;$('#fm').focus();$('#msg').textContent=r.m>0?'金额已经填好，确认后点“添加”':'填上金额，点“添加”就记好了';
+}
+var WKN=['日','一','二','三','四','五','六'];
+function remWhen(r){return r.f==='m'?'每月 '+r.k+' 号':r.f==='w'?'每周'+WKN[r.k]:'每年 '+r.mm+' 月 '+r.dd+' 日'}
+function renderRemList(){
+  var el=$('#remlist');if(!el)return;
+  var L=remList();
+  if(!L.length){el.innerHTML='<div class="empty" style="padding:8px 0">还没有提醒</div>';return}
+  el.innerHTML=L.map(function(r){
+    return '<div class="crow"><div class="ic" style="background:#fbbf242e">🔔</div><div class="nm">'+esc(r.n)+'<small>'+remWhen(r)+' · '+(r.t==='in'?'收入':'支出')+' · '+esc(r.c)+' · '+esc(r.a)+(r.m>0?' · RM '+fmt(r.m):'')+'</small></div>'+
+      '<button class="btn sm sec" data-re="'+esc(r.id)+'">编辑</button><button class="btn sm sec" data-rd="'+esc(r.id)+'">删除</button></div>';
+  }).join('');
+}
+function remDialog(r,cb){
+  var accs=allAccts(),cats=allCats().filter(function(c){return !isSys(c)});
+  var fv=r?(r.f==='m'?String(r.k):r.f==='w'?String(r.k||7):('0'+r.mm).slice(-2)+'-'+('0'+r.dd).slice(-2)):'1';
+  dlg({title:r?'编辑提醒':'新增提醒',text:'日期栏：每月填 1–31；每周填 1–7（1=周一，7=周日）；每年填 月-日，例如 03-15。',fields:[
+    {label:'名称（比如：电话费）',value:r?r.n:''},
+    {label:'收入还是支出',value:r?r.t:'in',opts:[['in','收入'],['out','支出']]},
+    {label:'分类',value:r?r.c:cats[0],opts:cats.map(function(c){return [c,c]})},
+    {label:'账户',value:r?r.a:accs[0],opts:acctOpts()},
+    {label:'多久一次',value:r?r.f:'m',opts:[['m','每月'],['w','每周'],['y','每年']]},
+    {label:'哪一天',value:fv},
+    {label:'从哪天开始',value:r?r.from:ymd(new Date()),date:true},
+    {label:'金额（RM，可不填；填了到期时会帮你填好）',value:r&&r.m>0?r.m:'',num:true}
+  ]},function(v){
+    var n=v[0].trim();if(!n){dlgAlert('请填名称');return}
+    var o={id:r?r.id:'r'+uid(),n:n,t:v[1],c:v[2],a:v[3],f:v[4],from:v[6]||ymd(new Date()),m:Math.max(0,Math.round((parseFloat(v[7])||0)*100)/100),u:Date.now()},x=v[5].trim();
+    if(o.f==='m'){var d=parseInt(x,10);if(!(d>=1&&d<=31)){dlgAlert('每月请填 1 到 31 之间的数字');return}o.k=d}
+    else if(o.f==='w'){var w=parseInt(x,10);if(!(w>=1&&w<=7)){dlgAlert('每周请填 1 到 7 之间的数字（1=周一，7=周日）');return}o.k=w%7}
+    else{var mt=/^(\d{1,2})[-\/](\d{1,2})$/.exec(x);if(!mt||+mt[1]<1||+mt[1]>12||+mt[2]<1||+mt[2]>31){dlgAlert('每年请填 月-日，例如 03-15');return}o.mm=+mt[1];o.dd=+mt[2]}
+    cb(o);
+  });
+}
+function newRem(){remDialog(null,function(o){S.rem=remList().concat([o]);persist();renderAll();renderSettings()})}
+function editRem(id){
+  var r=remList().filter(function(x){return x.id===id})[0];if(!r)return;
+  remDialog(r,function(o){S.rem=remList().map(function(x){return x.id===id?o:x});persist();renderAll();renderSettings()});
+}
+function delRem(id){
+  dlgConfirm('确定删除这个提醒？',function(){
+    S.rem=remList().filter(function(x){return x.id!==id});S.remDel=S.remDel||{};S.remDel[id]=Date.now();persist();renderAll();renderSettings();
+  });
+}
+
+/* ---------- 最近删除 / 撤销 ---------- */
+function trashList(){var cut=Date.now()-30*864e5;return (S.trash||[]).filter(function(t){return t.at>cut})}
+function trashPush(items,loan){
+  var id='t'+uid();S.trash=[{id:id,at:Date.now(),items:items,loan:loan||null}].concat(trashList()).slice(0,100);return id;
+}
+function restoreTrash(id){
+  var t=trashList().filter(function(x){return x.id===id})[0];if(!t)return;
+  var now=Date.now(),map={};
+  if(t.loan){var nid='l'+uid();S.loans=loanList().concat([Object.assign({},t.loan,{id:nid,u:now})]);map[t.loan.id]=nid}
+  var ng=(t.items.length===2&&t.items[0].g)?uid():null;
+  t.items.forEach(function(e,i){
+    var c=Object.assign({},e);c.id=uid();c.ts=now+i;c.u=now;
+    if(c.g)c.g=ng;if(c.l&&map[c.l])c.l=map[c.l];
+    S.entries.push(c);
+  });
+  S.trash=trashList().filter(function(x){return x.id!==id});
+  persist();renderAll();renderSettings();renderLoans();
+}
+function renderTrash(){
+  var el=$('#trashcard');if(!el)return;
+  var L=trashList();
+  if(!L.length){el.innerHTML='<div class="empty" style="padding:8px 0">最近 30 天没有删除过的记录</div>';return}
+  el.innerHTML=L.map(function(t){
+    var e=t.items[0]||{},d=new Date(t.at),tot=t.items.reduce(function(a,x){return a+(x.t==='in'?x.m:-x.m)},0);
+    var name=t.loan?'借还款：'+t.loan.who+'（'+t.items.length+' 笔）':(t.items.length>1?'转账 ':'')+(e.n||e.c||'');
+    var small=(d.getMonth()+1)+'月'+d.getDate()+'日删除 · '+(t.loan||t.items.length>1?'共 '+t.items.length+' 笔':(e.t==='in'?'+':'−')+'RM '+fmt(e.m||0));
+    return '<div class="crow"><div class="ic" style="background:'+cs(e.c||'其他')[1]+'2e">'+(t.loan?'🤝':cs(e.c||'其他')[0])+'</div><div class="nm">'+esc(name)+'<small>'+esc(small)+'</small></div><button class="btn sm sec" data-tr="'+esc(t.id)+'">恢复</button></div>';
+  }).join('')+'<div class="crow" style="justify-content:space-between"><div class="st" style="margin:0">保留 30 天，只保存在这台设备上。</div><button class="btn sm sec" id="trashclr">清空</button></div>';
+}
+
 /* ---------- 借还款 ---------- */
 var LOANOPEN={};
 function loanList(){return S.loans||[]}
@@ -532,12 +656,15 @@ function loanMove(id,kind){
 }
 function delLoan(id){
   var L=loanList().filter(function(x){return x.id===id})[0];if(!L)return;
-  dlgConfirm('确定删除和「'+L.who+'」的这笔借还款？相关的所有进出账记录也会一起删除，账户余额会回到没记之前的样子。',function(){
+  dlgConfirm('确定删除和「'+L.who+'」的这笔借还款？相关的进出账记录也会一起删除（可以在设置的“最近删除”里恢复）。',function(){
     var now=Date.now();S.del=S.del||{};S.loanDel=S.loanDel||{};
-    S.entries.forEach(function(e){if(e.l===id)S.del[e.id]=now});
+    var items=S.entries.filter(function(e){return e.l===id});
+    items.forEach(function(e){S.del[e.id]=now});
     S.entries=S.entries.filter(function(e){return e.l!==id});
     S.loans=loanList().filter(function(x){return x.id!==id});S.loanDel[id]=now;
+    var tid=trashPush(items,L);
     persist();renderAll();renderLoans();
+    toast('已删除借还款：'+L.who,function(){restoreTrash(tid)});
   });
 }
 
@@ -786,7 +913,7 @@ var dragBtn=null,dragTimer=null,dragId=null,sx=0,sy=0,suppress=false;
 })();
 
 function applyWM(){var w=$('#wm');if(w)w.textContent=S.wm||''}
-function renderAll(){renderForm();renderList();renderStats();applyWM();renderQuick();renderBudgetBar()}
+function renderAll(){renderForm();renderList();renderStats();applyWM();renderQuick();renderBudgetBar();renderRem()}
 var TITLES={add:'记账',stats:'统计',list:'明细',settings:'设置',loans:'借还款'};
 function tab(t){
   ['add','stats','list','loans','settings'].forEach(function(x){$('#p-'+x).hidden=x!==t});
@@ -809,7 +936,7 @@ function setFormDefaults(){ // 默认：支出 / tng / 食物
   var c=$('#fc');if([].some.call(c.options,function(o){return o.value==='食物'}))c.value='食物';
   trMode();
 }
-function resetForm(){editId=null;$('#fn').value='';$('#fm').value='';$('#save').textContent='添加';$('#cancel').hidden=true;setFormDefaults()}
+function resetForm(){editId=null;$('#fn').value='';$('#fm').value='';$('#save').textContent='添加';$('#cancel').hidden=true;REMFILL=null;setFormDefaults()}
 function save(){
   var m=parseFloat($('#fm').value);
   if(!$('#fd').value||!(m>0)){$('#msg').textContent='请填写日期和大于 0 的金额';return}
@@ -827,7 +954,7 @@ function save(){
     t:$('#ft').value,a:$('#fa').value,m:Math.round(m*100)/100,k:''};
   if(editId){S.entries=S.entries.map(function(x){if(x.id===editId){e.ts=x.ts;return e}return x})}
   else S.entries.push(e);
-  var was=editId;resetForm();persist();renderAll();
+  var was=editId,rf=REMFILL;resetForm();if(rf&&!was)remMark(rf);persist();renderAll();
   $('#msg').textContent=(was?'已修改：':'已添加：')+e.c+' '+(e.t==='in'?'+':'−')+'RM '+money(e.m);
 }
 function range(r){
@@ -851,6 +978,13 @@ document.addEventListener('click',function(ev){
   if((el=t.closest('[data-la]')))return loanMove(el.dataset.la,'p');
   if((el=t.closest('[data-lv]'))){LOANOPEN[el.dataset.lv]=!LOANOPEN[el.dataset.lv];return renderLoans()}
   if((el=t.closest('[data-ld]')))return delLoan(el.dataset.ld);
+  if((el=t.closest('[data-rf]')))return remFill(el.dataset.rf);
+  if((el=t.closest('[data-rs]'))){remMark(el.dataset.rs);persist();renderRem();return}
+  if(t.closest('#newrem'))return newRem();
+  if((el=t.closest('[data-re]')))return editRem(el.dataset.re);
+  if((el=t.closest('[data-rd]')))return delRem(el.dataset.rd);
+  if((el=t.closest('[data-tr]')))return restoreTrash(el.dataset.tr);
+  if(t.closest('#trashclr'))return dlgConfirm('清空“最近删除”？清空后就不能恢复了。',function(){S.trash=[];persist();renderSettings()});
   if((el=t.closest('[data-bs]')))return setBudget(el.dataset.bs);
   if((el=t.closest('[data-ae]')))return editAcc(el.dataset.ae);
   if((el=t.closest('[data-ad]')))return delAcc(el.dataset.ad);
@@ -892,7 +1026,14 @@ document.addEventListener('click',function(ev){
   if((el=t.closest('[data-x]'))){
     var me=S.entries.filter(function(x){return x.id===el.dataset.x})[0];
     var gid=me&&me.g;
-    dlgConfirm(gid?'这是一笔转账的其中一边，会把转出和转入两笔一起删除，确定？':'确定删除这一笔？',function(){var rm=S.entries.filter(function(x){return gid?x.g===gid:x.id===el.dataset.x});S.del=S.del||{};rm.forEach(function(x){S.del[x.id]=Date.now()});S.entries=S.entries.filter(function(x){return gid?x.g!==gid:x.id!==el.dataset.x});persist();renderAll()});return;
+    var rm0=S.entries.filter(function(x){return gid?x.g===gid:x.id===el.dataset.x});
+    if(rm0.length){
+      var now0=Date.now();S.del=S.del||{};rm0.forEach(function(x){S.del[x.id]=now0});
+      S.entries=S.entries.filter(function(x){return gid?x.g!==gid:x.id!==el.dataset.x});
+      var tid=trashPush(rm0);persist();renderAll();
+      toast('已删除：'+(rm0[0].n||rm0[0].c)+(rm0.length>1?'（转账，共 2 笔）':'')+' RM '+money(rm0[0].m),function(){restoreTrash(tid)});
+    }
+    return;
   }
   if(t.closest('#clr')){F={from:'',to:'',cat:'',t:'',q:''};$('#lq').value='';return renderList()}
   if((el=t.closest('.li')))el.classList.toggle('open');
@@ -988,7 +1129,7 @@ function updateFile(id,body){
   return dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
     {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:body});
 }
-function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,quick:quickList(),quickU:S.quickU||0,budget:bud(),budgetU:S.budgetU||0,loans:loanList(),loanDel:S.loanDel||{},entries:S.entries,del:S.del||{}}}
+function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,quick:quickList(),quickU:S.quickU||0,budget:bud(),budgetU:S.budgetU||0,loans:loanList(),loanDel:S.loanDel||{},rem:remList(),remDel:S.remDel||{},remDone:S.remDone||{},entries:S.entries,del:S.del||{}}}
 function mergeIn(P){
   if(!P||!P.entries)return;
   P.entries.forEach(function(e){if(e.c==='未知')e.c='错误'});
@@ -1012,6 +1153,20 @@ function mergeIn(P){
   loanList().forEach(function(l){lm[l.id]=l;lo.push(l.id)});
   (P.loans||[]).forEach(function(l){var x=lm[l.id];if(!x){lm[l.id]=l;lo.push(l.id)}else if((l.u||0)>(x.u||0))lm[l.id]=l});
   S.loans=lo.filter(function(id){return !ld[id]}).map(function(id){return lm[id]});S.loanDel=ld;
+  var rd=Object.assign({},S.remDel||{}),rmap={},ro=[],dn=Object.assign({},S.remDone||{});
+  for(k in (P.remDel||{}))rd[k]=Math.max(rd[k]||0,P.remDel[k]);
+  for(k in (P.remDone||{}))dn[k]=Math.max(dn[k]||0,P.remDone[k]);
+  remList().forEach(function(l){rmap[l.id]=l;ro.push(l.id)});
+  (P.rem||[]).forEach(function(l){var x=rmap[l.id];if(!x){rmap[l.id]=l;ro.push(l.id)}else if((l.u||0)>(x.u||0))rmap[l.id]=l});
+  S.rem=ro.filter(function(id){return !rd[id]}).map(function(id){return rmap[id]});S.remDel=rd;S.remDone=dn;
+}
+function remAhead(P){
+  var m={},d=P.remDel||{},dn=P.remDone||{},i,k,L=remList();
+  (P.rem||[]).forEach(function(l){m[l.id]=l});
+  for(i=0;i<L.length;i++){var r=m[L[i].id];if(!r||(L[i].u||0)>(r.u||0))return true}
+  for(k in (S.remDel||{}))if(!d[k])return true;
+  for(k in (S.remDone||{}))if(!dn[k])return true;
+  return false;
 }
 function loansAhead(P){
   var m={},d=P.loanDel||{},i,k,L=loanList();
@@ -1025,7 +1180,7 @@ function localAhead(P){
   (P.entries||[]).forEach(function(e){m[e.id]=e});
   for(i=0;i<S.entries.length;i++){var e=S.entries[i],r=m[e.id];if(!r||(e.u||e.ts)>(r.u||r.ts))return true}
   for(k in (S.del||{}))if(!d[k])return true;
-  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0)||(S.budgetU||0)>(P.budgetU||0)||loansAhead(P);
+  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0)||(S.budgetU||0)>(P.budgetU||0)||loansAhead(P)||remAhead(P);
 }
 function sync(interactive,retried){
   if(syncing)return Promise.resolve();
@@ -1040,7 +1195,7 @@ function sync(interactive,retried){
     }
     SY.fileId=id;
     return dfetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media').then(function(r){return r.json()}).then(function(remote){
-      mergeIn(remote);persist(true);renderAll();
+      mergeIn(remote);persist(true);renderAll();if(!$('#p-settings').hidden)renderSettings();if(!$('#p-loans').hidden)renderLoans();
       ver0=SY.ver;
       if(SY.dirty||localAhead(remote))return updateFile(id,JSON.stringify(payload()));
     });

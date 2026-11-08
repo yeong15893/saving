@@ -57,6 +57,7 @@ input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-ra
 .ltag{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut);margin-left:6px;font-weight:400}
 .lev{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:13px}
 .lev div{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
+.sug{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .crow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .crow:first-of-type{border-top:0}
 .crow .nm{flex:1;min-width:0;font-weight:600}
@@ -138,7 +139,8 @@ details.more summary::-webkit-details-marker{display:none}
 <div class="card">
 <div class="row"><div><label>日期</label><input id="fd" type="date"></div>
 <div id="catbox"><label>分类</label><select id="fc"></select></div></div>
-<label>详细</label><input id="fn" placeholder="例如：羽毛球">
+<label>详细</label><input id="fn" placeholder="例如：羽毛球" autocomplete="off">
+<div class="sug" id="sug" hidden></div>
 <div class="row"><div><label>收入 / 支出</label><select id="ft"><option value="out">支出</option><option value="in">收入</option><option value="tr">转账</option></select></div>
 <div><label id="falbl">账户</label><select id="fa"><option value="cash">cash</option><option value="tng">tng</option><option value="rhb">rhb</option></select></div>
 <div><label>金额</label><input id="fm" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div></div>
@@ -159,6 +161,7 @@ details.more summary::-webkit-details-marker{display:none}
 <section id="p-list" hidden>
 <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="lq" type="search" placeholder="搜索标题、分类、金额"></div>
 <div class="chips" id="cchips"></div>
+<div class="chips" id="achips" style="margin-top:2px"></div>
 <details class="more"><summary>更多筛选（日期、收入/支出）</summary>
 <div class="card" style="margin-bottom:0">
 <div class="row"><div><label>从</label><input id="lf" type="date"></div><div><label>到</label><input id="lt" type="date"></div></div>
@@ -261,7 +264,7 @@ var d26b = [];
 });
 
 var S = { cats: cats, open: fixedOpen, entries: rawDataList };
-var F={from:'',to:'',cat:'',t:'',q:''},editId=null;
+var F={from:'',to:'',cat:'',acct:'',t:'',q:''},editId=null;
 var ST={mode:'m',y:new Date().getFullYear(),m:new Date().getMonth()+1};
 var $=function(s){return document.querySelector(s)};
 function pad(n){return String(n).padStart(2,'0')}
@@ -325,7 +328,7 @@ function filtered(){
   var q=F.q.trim().toLowerCase();
   return S.entries.filter(function(e){
     if(F.from&&e.d<F.from)return false;if(F.to&&e.d>F.to)return false;
-    if(F.cat&&e.c!==F.cat)return false;if(F.t&&e.t!==F.t)return false;
+    if(F.cat&&e.c!==F.cat)return false;if(F.acct&&e.a!==F.acct)return false;if(F.t&&e.t!==F.t)return false;
     if(q){var txt=(e.n+' '+(e.k||'')+' '+e.c+' '+e.m+' '+e.a).toLowerCase();if(txt.indexOf(q)<0)return false}
     return true;
   }).sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:(a.ts<b.ts?1:-1)});
@@ -342,6 +345,9 @@ function renderList(){
   var ch='<button class="chip'+(F.cat===''?' on':'')+'" data-cat="">全部</button>';
   allCats().forEach(function(c){ch+='<button class="chip'+(F.cat===c?' on':'')+'" data-cat="'+esc(c)+'">'+cs(c)[0]+' '+esc(c)+'</button>'});
   $('#cchips').innerHTML=ch;
+  var ah2='<button class="chip'+(F.acct===''?' on':'')+'" data-ac="">全部账户</button>';
+  allAccts().forEach(function(a){ah2+='<button class="chip'+(F.acct===a?' on':'')+'" data-ac="'+esc(a)+'">💳 '+esc(a)+'</button>'});
+  $('#achips').innerHTML=ah2;
   var rows=filtered(),i=0,o=0,tc=0,showT=isSys(F.cat);
   rows.forEach(function(e){if(isSys(e.c)){tc++;if(!showT)return}if(e.t==='in')i+=e.m;else o+=e.m});
   $('#lsum').innerHTML=showT?(F.cat==='借还款'?'共 '+rows.length+' 笔借还款 · 钱进来 +RM '+fmt(i)+' · 钱出去 −RM '+fmt(o)+'（借还款不算收入和支出）':'共 '+rows.length+' 笔转账 · 转入 +RM '+fmt(i)+' · 转出 −RM '+fmt(o)+'（账户之间的转账，不算收入和支出）'):
@@ -467,6 +473,45 @@ function delCat(c){
     persist();renderAll();renderSettings();
   });
 }
+/* ---------- 输入详细时的提示（来自以前的记录） ---------- */
+var SUG=[];
+function topKey(o){var b=null,bc=-1;for(var k in o)if(o[k]>bc){b=k;bc=o[k]}return b}
+function sugIndex(){
+  var map={};
+  S.entries.forEach(function(e){
+    if(isSys(e.c)||!e.n)return;
+    var k=e.n.trim();if(!k)return;
+    var g=map[k]||(map[k]={n:k,c:0,cats:{},accs:{},last:null});
+    g.c++;g.cats[e.c]=(g.cats[e.c]||0)+1;g.accs[e.a]=(g.accs[e.a]||0)+1;
+    if(!g.last||(e.ts||0)>(g.last.ts||0))g.last=e;
+  });
+  return Object.keys(map).map(function(k){return map[k]});
+}
+function renderSug(){
+  var q=$('#fn').value.trim().toLowerCase(),el=$('#sug');
+  if(!q){el.hidden=true;el.innerHTML='';SUG=[];return}
+  var list=sugIndex().filter(function(g){return g.n.toLowerCase().indexOf(q)>=0});
+  list.sort(function(a,b){
+    var as=a.n.toLowerCase().indexOf(q)===0?0:1,bs=b.n.toLowerCase().indexOf(q)===0?0:1;
+    return as-bs||b.c-a.c||(b.last.ts||0)-(a.last.ts||0);
+  });
+  SUG=list.slice(0,5).map(function(g){return {n:g.n,c:topKey(g.cats),a:g.last.a,t:g.last.t,m:g.last.m}});
+  el.hidden=!SUG.length;
+  el.innerHTML=SUG.map(function(x,i){
+    return '<button type="button" class="chip" data-sg="'+i+'">'+esc(x.n)+'<small style="opacity:.6;margin-left:6px">'+esc(x.c)+' · '+esc(x.a)+' · '+amt(x.m)+'</small></button>';
+  }).join('');
+}
+function useSug(i){
+  var x=SUG[i];if(!x)return;
+  $('#ft').value=x.t==='in'?'in':'out';
+  if([].some.call($('#fa').options,function(o){return o.value===x.a}))$('#fa').value=x.a;
+  var fc=$('#fc');
+  if(![].some.call(fc.options,function(o){return o.value===x.c})){var op=document.createElement('option');op.value=x.c;op.textContent=x.c;fc.appendChild(op)}
+  fc.value=x.c;$('#fn').value=x.n;
+  if(!$('#fm').value)$('#fm').value=x.m;
+  trMode();SUG=[];$('#sug').hidden=true;$('#sug').innerHTML='';$('#fm').focus();$('#fm').select();
+}
+
 /* ---------- 提醒 ---------- */
 var REMFILL=null;
 function remList(){return S.rem||[]}
@@ -945,7 +990,7 @@ function setFormDefaults(){ // 默认：支出 / tng / 食物
   var c=$('#fc');if([].some.call(c.options,function(o){return o.value==='食物'}))c.value='食物';
   trMode();
 }
-function resetForm(){editId=null;$('#fn').value='';$('#fm').value='';$('#save').textContent='添加';$('#cancel').hidden=true;REMFILL=null;setFormDefaults()}
+function resetForm(){editId=null;$('#fn').value='';$('#fm').value='';$('#save').textContent='添加';$('#cancel').hidden=true;REMFILL=null;SUG=[];if($('#sug')){$('#sug').hidden=true;$('#sug').innerHTML=''}setFormDefaults()}
 function save(){
   var m=parseFloat($('#fm').value);
   if(!$('#fd').value||!(m>0)){$('#msg').textContent='请填写日期和大于 0 的金额';return}
@@ -1015,6 +1060,8 @@ document.addEventListener('click',function(ev){
   if(t.closest('#expcsv'))return exportCSV();
   if((el=t.closest('[data-r]')))return range(el.dataset.r);
   if((el=t.closest('[data-cat]'))){F.cat=el.dataset.cat;return renderList()}
+  if((el=t.closest('[data-ac]'))){F.acct=el.dataset.ac;return renderList()}
+  if((el=t.closest('[data-sg]')))return useSug(+el.dataset.sg);
   if((el=t.closest('[data-sm]'))){ST.mode=el.dataset.sm;return renderStats()}
   if((el=t.closest('[data-sp]'))){
     var d=+el.dataset.sp;
@@ -1044,12 +1091,13 @@ document.addEventListener('click',function(ev){
     }
     return;
   }
-  if(t.closest('#clr')){F={from:'',to:'',cat:'',t:'',q:''};$('#lq').value='';return renderList()}
+  if(t.closest('#clr')){F={from:'',to:'',cat:'',acct:'',t:'',q:''};$('#lq').value='';return renderList()}
   if((el=t.closest('.li')))el.classList.toggle('open');
 });
 
 $('#save').onclick=save;
 $('#ft').onchange=trMode;
+$('#fn').addEventListener('input',renderSug);
 $('#cancel').onclick=function(){resetForm();$('#msg').textContent=''};
 $('#lf').onchange=function(){F.from=this.value;renderList()};
 $('#lt').onchange=function(){F.to=this.value;renderList()};

@@ -58,6 +58,19 @@ input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-ra
 .lev{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:13px}
 .lev div{display:flex;justify-content:space-between;gap:8px;padding:3px 0}
 .sug{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .wd{text-align:center;font-size:11px;color:var(--mut);padding:2px 0}
+.cal .cd{aspect-ratio:1/1.05;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid transparent;color:var(--fg);padding:3px 1px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;font-size:11px;min-width:0;overflow:hidden}
+.cal .cd b{font-size:10px;font-weight:600}
+.cal .cd.e{background:transparent}
+.cal .cd.t{border-color:var(--acc)}
+.cal button.cd{cursor:pointer;font-family:inherit}
+.k2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.k2>div{background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px}
+.k2 small{display:block;color:var(--mut);font-size:12px;margin-bottom:3px}.k2 b{font-size:16px}
+.k2 em{display:block;font-style:normal;font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}
+.tp:first-of-type{border-top:0}.tp .tn{min-width:0;flex:1}.tp .tn b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tp .tn small{color:var(--mut)}
 .crow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .crow:first-of-type{border-top:0}
 .crow .nm{flex:1;min-width:0;font-weight:600}
@@ -74,6 +87,7 @@ input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-ra
 .search input{padding-left:36px;background:var(--card);border-radius:12px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
+.chips{overscroll-behavior-x:contain}
 .chip{flex:0 0 auto;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:13px;cursor:pointer}
 .chip.on{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
 details.more{margin-bottom:10px}
@@ -382,11 +396,11 @@ function renderStats(){
   document.querySelectorAll('[data-sm]').forEach(function(b){b.classList.toggle('on',b.dataset.sm===ST.mode)});
   var nb=m?Math.ceil(new Date(ST.y,ST.m,0).getDate()/7):12,bars=[],labels=[],k;
   for(k=0;k<nb;k++){bars.push(0);labels.push(m?'第'+(k+1)+'周':(k+1)+'月')}
-  var out=0,inc=0,pout=0,by={};
+  var out=0,inc=0,pout=0,by={},day={},wk=[0,0,0,0,0,0,0],nOut=0,exps=[];
   S.entries.forEach(function(e){
     if(isSys(e.c))return;
     if(e.d.indexOf(pre)===0){
-      if(e.t==='out'){out+=e.m;by[e.c]=(by[e.c]||0)+e.m;bars[m?Math.floor((+e.d.slice(8,10)-1)/7):(+e.d.slice(5,7)-1)]+=e.m}
+      if(e.t==='out'){nOut++;exps.push(e);day[e.d]=(day[e.d]||0)+e.m;var dp=e.d.split('-');wk[new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()]+=e.m;out+=e.m;by[e.c]=(by[e.c]||0)+e.m;bars[m?Math.floor((+e.d.slice(8,10)-1)/7):(+e.d.slice(5,7)-1)]+=e.m}
       else inc+=e.m;
     }else if(e.t==='out'&&e.d.indexOf(ppre)===0)pout+=e.m;
   });
@@ -400,6 +414,32 @@ function renderStats(){
     h+='<div class="bc"><div class="bv">'+(v?compact(v):'0')+'</div><div class="bb'+(v?'':' z')+'" style="height:'+(v?Math.max(8,Math.round(v/mx*110)):6)+'px"></div><div class="bl">'+labels[i]+'</div></div>';
   });
   h+='</div></div>';
+  /* --- 小统计 / 月历 / 星期 / 最大几笔 --- */
+  var today=new Date(),t0=new Date(today.getFullYear(),today.getMonth(),today.getDate()),days;
+  if(m){var dm=new Date(ST.y,ST.m,0).getDate(),cur=(ST.y===today.getFullYear()&&ST.m===today.getMonth()+1);days=cur?today.getDate():(new Date(ST.y,ST.m-1,1)>t0?0:dm)}
+  else{var ys=new Date(ST.y,0,1),ye=new Date(ST.y,11,31);days=ST.y===today.getFullYear()?Math.round((t0-ys)/864e5)+1:(ys>t0?0:Math.round((ye-ys)/864e5)+1)}
+  var bestD=null;for(var dk in day){if(!bestD||day[dk]>day[bestD])bestD=dk}
+  exps.sort(function(a,b){return b.m-a.m});
+  var kk='<div class="card"><div class="ch"><b>小统计</b><span>'+(m?'这个月':'这一年')+'</span></div><div class="k2">'+
+    '<div><small>日均支出</small><b>RM '+(days>0?fmt(out/days):'0.00')+'</b><em>按 '+days+' 天算</em></div>'+
+    '<div><small>花得最多的一天</small><b>'+(bestD?'RM '+fmt(day[bestD]):'—')+'</b><em>'+(bestD?(+bestD.slice(5,7))+'月'+(+bestD.slice(8,10))+'日':'还没有支出')+'</em></div>'+
+    '<div><small>支出笔数</small><b>'+nOut+' 笔</b><em>'+(nOut?'平均每笔 RM '+fmt(out/nOut):'')+'</em></div>'+
+    '<div><small>最大的一笔</small><b>'+(exps[0]?'RM '+fmt(exps[0].m):'—')+'</b><em>'+(exps[0]?esc(exps[0].n||exps[0].c):'')+'</em></div></div></div>';
+  h+=kk;
+  if(m){
+    var dm2=new Date(ST.y,ST.m,0).getDate(),first=new Date(ST.y,ST.m-1,1).getDay(),dmx=1,i2;
+    for(i2 in day)if(day[i2]>dmx)dmx=day[i2];
+    var ch2='<div class="card"><div class="ch"><b>月历</b><span>每天的支出 · 点一天看明细</span></div><div class="cal">';
+    ['日','一','二','三','四','五','六'].forEach(function(w){ch2+='<div class="wd">'+w+'</div>'});
+    for(i2=0;i2<first;i2++)ch2+='<div class="cd e"></div>';
+    for(i2=1;i2<=dm2;i2++){
+      var ds=ST.y+'-'+pad(ST.m)+'-'+pad(i2),v=day[ds]||0,istoday=(ds===ymd(today));
+      var bg=v?'background:rgba(255,159,67,'+(0.14+0.56*v/dmx).toFixed(2)+')':'';
+      var lab=v?(v>=100?String(Math.round(v)):String(Math.round(v*10)/10)):'';
+      ch2+=v?'<button type="button" class="cd'+(istoday?' t':'')+'" style="'+bg+'" data-day="'+ds+'"><span>'+i2+'</span><b>'+lab+'</b></button>':'<div class="cd'+(istoday?' t':'')+'"><span>'+i2+'</span><b>&nbsp;</b></div>';
+    }
+    h+=ch2+'</div></div>';
+  }
   var list=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
   h+='<div class="card"><div class="ch"><b>分布图</b><span>分类从高到低 · 点一下看明细</span></div>';
   if(!list.length)h+='<div class="empty" style="padding:20px 0">这段时间还没有支出记录</div>';
@@ -408,6 +448,14 @@ function renderStats(){
     h+='<div class="dr" data-dc="'+esc(c)+'"><div class="dh"><div class="ic" style="background:'+st[1]+'2e">'+st[0]+'</div><span class="nm">'+esc(c)+'</span><span class="pc">'+Math.round(by[c]/out*100)+'%</span><b>RM '+fmt(by[c])+'</b></div><div class="dbar"><i style="width:'+w+'%;background:'+st[1]+'"></i></div></div>';
   });
   h+='</div>';
+  var wmx=Math.max.apply(null,wk.concat([1])),wn=['日','一','二','三','四','五','六'],order=[1,2,3,4,5,6,0],wh='<div class="card"><div class="ch"><b>星期几花得多</b><span>合计（RM）</span></div><div class="bars" style="height:150px">';
+  order.forEach(function(d){var v=wk[d];wh+='<div class="bc"><div class="bv">'+(v?compact(v):'0')+'</div><div class="bb'+(v?'':' z')+'" style="height:'+(v?Math.max(8,Math.round(v/wmx*90)):6)+'px"></div><div class="bl">周'+wn[d]+'</div></div>'});
+  h+=wh+'</div></div>';
+  if(exps.length){
+    h+='<div class="card"><div class="ch"><b>最大的几笔</b><span>支出从大到小</span></div>'+exps.slice(0,5).map(function(e){
+      return '<div class="tp" data-day="'+e.d+'"><div class="tn"><b>'+esc(e.n||e.c)+'</b><small>'+(+e.d.slice(5,7))+'月'+(+e.d.slice(8,10))+'日 · '+esc(e.c)+' · '+esc(e.a)+'</small></div><b class="out">−RM '+fmt(e.m)+'</b></div>';
+    }).join('')+'</div>';
+  }
   $('#stbody').innerHTML=h;
 }
 function initStats(){
@@ -564,7 +612,7 @@ function remFill(key){
   });
 }
 var WKN=['日','一','二','三','四','五','六'];
-function remWhen(r){return r.f==='m'?'每月 '+r.k+' 号':r.f==='w'?'每周'+WKN[r.k]:'每年 '+r.mm+' 月 '+r.dd+' 日'}
+function remWhen(r){return r.f==='m'?(r.k===31?'每月最后一天':'每月 '+r.k+' 号'):r.f==='w'?'每周'+WKN[r.k]:'每年 '+r.mm+' 月 '+r.dd+' 日'}
 function renderRemList(){
   var el=$('#remlist');if(!el)return;
   var L=remList();
@@ -577,7 +625,7 @@ function renderRemList(){
 function remDialog(r,cb){
   var accs=allAccts(),cats=allCats().filter(function(c){return !isSys(c)});
   var fv=r?(r.f==='m'?String(r.k):r.f==='w'?String(r.k||7):('0'+r.mm).slice(-2)+'-'+('0'+r.dd).slice(-2)):'1';
-  dlg({title:r?'编辑提醒':'新增提醒',text:'日期栏：每月填 1–31；每周填 1–7（1=周一，7=周日）；每年填 月-日，例如 03-15。',fields:[
+  dlg({title:r?'编辑提醒':'新增提醒',text:'日期栏：每月填 1–31，填 31 就是每个月的最后一天（30 天、28 天、29 天的月份会自动算在那个月最后一天）；每周填 1–7（1=周一，7=周日）；每年填 月-日，例如 03-15。',fields:[
     {label:'名称（比如：电话费）',value:r?r.n:''},
     {label:'收入还是支出',value:r?r.t:'in',opts:[['in','收入'],['out','支出']]},
     {label:'分类',value:r?r.c:cats[0],opts:cats.map(function(c){return [c,c]})},
@@ -780,12 +828,12 @@ function dlg(o,cb){
     if(f.opts){h+='<select data-f="'+i+'">'+f.opts.map(function(x){return '<option value="'+esc(x[0])+'"'+(x[0]===f.value?' selected':'')+'>'+esc(x[1])+'</option>'}).join('')+'</select>'}
     else h+='<input data-f="'+i+'"'+(f.date?' type="date"':'')+' value="'+esc(f.value==null?'':f.value)+'"'+(f.num?' inputmode="decimal"':'')+' autocomplete="off">';
   });
-  h+='<div class="drow">'+(o.noCancel?'':'<button type="button" class="btn sec" data-dc>取消</button>')+'<button type="button" class="btn" data-dok>'+esc(o.ok||'确定')+'</button></div></div>';
+  h+='<div class="drow">'+(o.noCancel?'':'<button type="button" class="btn sec" data-dcancel>取消</button>')+'<button type="button" class="btn" data-dok>'+esc(o.ok||'确定')+'</button></div></div>';
   w.innerHTML=h;document.body.appendChild(w);
   var ins=w.querySelectorAll('input,select');if(ins[0])ins[0].focus();
   function done(){var v=[].map.call(ins,function(x){return x.value});w.remove();if(cb)cb(v)}
   w.addEventListener('click',function(e){
-    if(e.target===w||e.target.closest('[data-dc]')){w.remove();return}
+    if(e.target===w||e.target.closest('[data-dcancel]')){w.remove();return}
     if(e.target.closest('[data-dok]'))done();
   });
   w.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();done()}if(e.key==='Escape')w.remove()});
@@ -1061,6 +1109,7 @@ document.addEventListener('click',function(ev){
   if((el=t.closest('[data-r]')))return range(el.dataset.r);
   if((el=t.closest('[data-cat]'))){F.cat=el.dataset.cat;return renderList()}
   if((el=t.closest('[data-ac]'))){F.acct=el.dataset.ac;return renderList()}
+  if((el=t.closest('[data-day]'))){F={from:el.dataset.day,to:el.dataset.day,cat:'',acct:'',t:'',q:''};$('#lq').value='';tab('list');return}
   if((el=t.closest('[data-sg]')))return useSug(+el.dataset.sg);
   if((el=t.closest('[data-sm]'))){ST.mode=el.dataset.sm;return renderStats()}
   if((el=t.closest('[data-sp]'))){
@@ -1070,7 +1119,7 @@ document.addEventListener('click',function(ev){
   }
   if((el=t.closest('[data-dc]'))){
     var y=ST.y,mo=ST.m;
-    F={from:ST.mode==='m'?y+'-'+pad(mo)+'-01':y+'-01-01',to:ST.mode==='m'?ymd(new Date(y,mo,0)):y+'-12-31',cat:el.dataset.dc,t:'out',q:''};
+    F={from:ST.mode==='m'?y+'-'+pad(mo)+'-01':y+'-01-01',to:ST.mode==='m'?ymd(new Date(y,mo,0)):y+'-12-31',cat:el.dataset.dc,acct:'',t:'out',q:''};
     $('#lq').value='';tab('list');return;
   }
   if((el=t.closest('[data-e]'))){
@@ -1097,6 +1146,13 @@ document.addEventListener('click',function(ev){
 
 $('#save').onclick=save;
 $('#ft').onchange=trMode;
+document.addEventListener('wheel',function(e){
+  var c=e.target.closest&&e.target.closest('.chips');
+  if(!c||c.scrollWidth<=c.clientWidth+1||e.ctrlKey)return;
+  var dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
+  if(!dx)return;
+  e.preventDefault();c.scrollLeft+=dx; // 鼠标在这一行上时，滚轮只管这一行，到头了也不带动页面
+},{passive:false});
 $('#fn').addEventListener('input',renderSug);
 $('#cancel').onclick=function(){resetForm();$('#msg').textContent=''};
 $('#lf').onchange=function(){F.from=this.value;renderList()};

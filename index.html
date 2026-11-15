@@ -9,7 +9,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-:root{--bg:#0e1014;--fg:#eceef2;--mut:#8b93a1;--card:#1a1d23;--card2:#22262e;--line:#2c313a;--acc:#58b98c;--accfg:#0d1f17;--in:#6fd08f;--out:#ff6b6b;
+:root{--bg:#121726;--fg:#ece7da;--mut:#9aa1b6;--card:#1a2135;--card2:#222b43;--line:#2b3550;--acc:#58b98c;--accfg:#0d1f17;--in:#6fd08f;--out:#ff6b6b;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);color-scheme:dark}
 html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -132,6 +132,81 @@ details.more summary::-webkit-details-marker{display:none}
 .dh .nm{flex:1}.dh .pc{font-size:12px;color:var(--mut)}
 .dbar{height:8px;border-radius:99px;background:var(--card2);overflow:hidden}
 .dbar i{display:block;height:100%;border-radius:99px}
+
+/* ===== 视觉升级：墨靛 + 铜金（账本感） ===== */
+body{font:15px/1.55 -apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+h1{font-size:24px;font-weight:700;letter-spacing:.06em;color:var(--fg);margin:10px 2px 16px}
+.card{border-radius:20px;border:1px solid rgba(255,255,255,.05);padding:16px}
+label{margin:10px 0 4px;letter-spacing:.02em}
+input,select{background:#0f1423;border-color:var(--line);border-radius:12px;padding:11px 12px}
+input:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(88,185,140,.22)}
+button:focus-visible,.chip:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn{background:linear-gradient(180deg,#66c699,#4fae82);border-color:#46a37a;border-radius:12px;font-weight:700;letter-spacing:.04em;transition:transform .12s,filter .12s}
+.btn:active{transform:scale(.98);filter:brightness(.95)}
+.btn.sec{background:transparent;color:var(--acc);border-color:rgba(88,185,140,.5)}
+.btn.sm{border-radius:10px}
+.sec:active{background:rgba(88,185,140,.12)}
+/* 总资产：像账本的“合计”行，数字下面是会计常用的双下划线 */
+.hero0{padding:18px 18px 16px;border-color:rgba(88,185,140,.26);background:var(--card)}
+.hero0 .cap{font-size:13px;color:var(--mut);letter-spacing:.08em}
+.hero0 .totrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 18px}
+.tot{position:relative;display:inline-block;font-size:38px;font-weight:700;letter-spacing:.01em;line-height:1.15;color:var(--fg);padding-bottom:9px}
+.tot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;border-top:1.5px solid var(--acc);border-bottom:1.5px solid var(--acc);transform-origin:left;animation:ruledraw .9s .15s cubic-bezier(.2,.7,.2,1) both}
+@keyframes ruledraw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.eye{color:var(--mut)}
+.bal{gap:12px 0}
+.bal div{background:none;border-radius:0;padding:0 12px;text-align:left;font-size:12px;color:var(--mut);border-left:1px solid var(--line)}
+.bal div:first-child{border-left:0;padding-left:0}
+.bal b{font-size:17px;font-weight:650;color:var(--fg);margin-top:2px}
+.qbar{gap:8px;margin:0 0 14px}
+/* 小控件 */
+.chip{background:transparent;border-color:var(--line);color:var(--fg);padding:7px 14px;transition:background .12s,border-color .12s}
+.chip.on{background:rgba(88,185,140,.16);color:#8fdcb3;border-color:var(--acc);font-weight:600}
+.qbar .q.in{border-color:rgba(111,208,143,.5)}
+.sync{background:rgba(26,33,53,.92);color:var(--mut);border-color:var(--line)}
+.wm{color:rgba(236,231,218,.3)}
+.search input{background:var(--card);border-radius:14px}
+details.more summary{color:var(--acc)}
+.dbar{height:6px;background:rgba(255,255,255,.07)}
+/* 明细 */
+.sumline{color:var(--mut)}
+.gh{margin:20px 4px 8px;font-size:14px;font-weight:650;color:var(--fg)}
+.gh>span:first-child{position:relative;padding-left:11px}
+.gh>span:first-child::before{content:"";position:absolute;left:0;top:.3em;bottom:.3em;width:3px;border-radius:2px;background:var(--acc)}
+.grp{border-radius:18px;border:1px solid rgba(255,255,255,.05)}
+.li{padding:12px 14px;border-top-color:rgba(255,255,255,.06)}
+.ic{width:36px;height:36px;font-size:17px}
+.amt{font-weight:650}
+.lt small,.lsm{color:var(--mut)}
+/* 统计 */
+.seg button{border-radius:14px;background:transparent}
+.seg button.on{background:rgba(88,185,140,.14);color:#8fdcb3;border-color:rgba(88,185,140,.55)}
+.pnav button{background:transparent}
+.hero{background:var(--card);border-color:rgba(88,185,140,.26);border-radius:20px}
+.hero .hl{color:var(--mut)}
+.pill{background:rgba(88,185,140,.14);color:#8fdcb3}
+.hero .big{display:inline-block;color:var(--fg);font-size:36px;font-weight:700;margin:8px 0 8px;padding-bottom:8px;border-bottom:5px double var(--acc);line-height:1.15}
+.hero .mini{color:var(--mut);margin-top:6px}
+.bb{background:linear-gradient(180deg,#5b9bff,#2f5fd6)}
+.bb.z{background:#3b5db0;opacity:.55}
+.ls2>div,.k2>div{background:rgba(255,255,255,.04);border-radius:14px}
+.cal .cd{background:rgba(255,255,255,.035)}
+/* 底部导航 */
+.tabbar{background:rgba(18,23,38,.94);border-top-color:var(--line);padding-top:8px}
+.tabbar button{gap:4px;font-size:11px;letter-spacing:.04em}
+.tabbar button span{display:grid;place-items:center;font-size:0;line-height:0}
+.tabbar button[aria-selected="true"]{color:var(--acc)}
+.tabbar button[aria-selected="true"]::before{content:"";position:absolute;top:-9px;left:32%;right:32%;height:2px;border-radius:2px;background:var(--acc)}
+/* 提示与弹窗 */
+.toast{background:rgba(34,43,67,.98);border-radius:14px}
+.dlg{background:rgba(8,11,20,.66);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.dbox{background:var(--card2);border-radius:20px;border-color:rgba(255,255,255,.07)}
+/* 设置里的列表：名字一行，说明另起一行；删除类按钮用朱红 */
+.crow .nm small{display:block;margin:2px 0 0;font-size:12px}
+.crow .nm{line-height:1.35}
+.btn.sm[data-qd],.btn.sm[data-ad],.btn.sm[data-cd],.btn.sm[data-rd],.btn.sm[data-ld],.act [data-x]{color:var(--out);border-color:rgba(232,116,92,.45)}
+.btn.sm[data-qd]:active,.btn.sm[data-ad]:active,.btn.sm[data-cd]:active,.btn.sm[data-rd]:active,.btn.sm[data-ld]:active,.act [data-x]:active{background:rgba(232,116,92,.12)}
+@media (prefers-reduced-motion:reduce){.tot::after{animation:none}.btn,.chip{transition:none}}
 </style>
 </head>
 <body>
@@ -141,10 +216,10 @@ details.more summary::-webkit-details-marker{display:none}
 
 <section id="p-add">
 <div id="remcards"></div>
-<div class="card" style="background:linear-gradient(135deg,#162438 0%,#1e112a 100%);border:1px solid rgba(255,255,255,0.08);">
-  <div style="font-size:13px;color:rgba(255,255,255,0.7);">当前总资产余额</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 14px">
-    <div id="top-total-bal" style="font-size:28px;font-weight:800;color:#fff;">RM ••••</div>
+<div class="card hero0">
+  <div class="cap">当前总资产余额</div>
+  <div class="totrow">
+    <div id="top-total-bal" class="tot">RM ••••</div>
     <button id="eyebtn" class="eye" type="button" aria-label="显示/隐藏余额"></button>
   </div>
   <div class="bal" id="top-account-bal"></div>
@@ -188,7 +263,7 @@ details.more summary::-webkit-details-marker{display:none}
 
 <section id="p-loans" hidden>
 <div class="card">
-<div class="lh" style="margin-bottom:10px"><b>借还款</b><button id="eyebtn2" class="eye" type="button" aria-label="显示/隐藏金额"></button></div>
+<div class="lh" style="margin-bottom:10px"><span class="lsm">当前未还</span></div>
 <div class="ls2"><div><small>别人欠我</small><b id="owedme">RM ••••</b></div><div><small>我欠别人</small><b id="iowe">RM ••••</b></div></div>
 </div>
 <button class="btn" id="newloan" type="button" style="width:100%;margin-bottom:12px">＋ 新增借款</button>
@@ -229,7 +304,8 @@ details.more summary::-webkit-details-marker{display:none}
 <label>Google 客户端 ID</label><input id="cid" placeholder="xxxx.apps.googleusercontent.com" autocapitalize="off" autocomplete="off" spellcheck="false">
 <div class="row" style="margin-top:12px"><button class="btn" id="sycon">连接并同步</button><button class="btn sec" id="sysync">立即同步</button></div>
 <div class="row" style="margin-top:8px"><button class="btn sec" id="sydis">断开连接</button></div>
-<div class="st">账本会存成你 Drive 里的“记账本数据.json”。离线照常记账，联网后点右上角的云朵同步。</div>
+<div class="row" style="margin-top:8px"><button class="btn sec" id="autologin" type="button"></button></div>
+<div class="st">账本会存成你 Drive 里的“记账本数据.json”。离线照常记账，不需要登录；联网后点右上角的云朵同步。登录大约每小时过期。打开“自动登录”后，过期了点任何按钮都会顺便重新登录（联网时才会，离线不会弹出）。</div>
 </div>
 <div class="sech">提醒</div>
 <div class="card">
@@ -250,11 +326,11 @@ details.more summary::-webkit-details-marker{display:none}
 
 <div class="toast" id="toast" hidden></div>
 <nav class="tabbar" role="tablist">
-<button role="tab" data-t="add" aria-selected="true"><span>✏️</span>记账</button>
-<button role="tab" data-t="list" aria-selected="false"><span>🕘</span>明细</button>
-<button role="tab" data-t="stats" aria-selected="false"><span>📊</span>统计</button>
-<button role="tab" data-t="loans" aria-selected="false"><span>🤝</span>借还款</button>
-<button role="tab" data-t="settings" aria-selected="false"><span>⚙️</span>设置</button>
+<button role="tab" data-t="add" aria-selected="true"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>记账</button>
+<button role="tab" data-t="list" aria-selected="false"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><polyline points="12 6.5 12 12 15.5 14"/></svg></span>明细</button>
+<button role="tab" data-t="stats" aria-selected="false"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>统计</button>
+<button role="tab" data-t="loans" aria-selected="false"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1.5 21 5.5 17 9.5"/><path d="M3 11.5v-2a4 4 0 0 1 4-4h14"/><polyline points="7 22.5 3 18.5 7 14.5"/><path d="M21 12.5v2a4 4 0 0 1-4 4H3"/></svg></span>借还款</button>
+<button role="tab" data-t="settings" aria-selected="false"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>设置</button>
 </nav>
 
 <script>
@@ -560,6 +636,41 @@ function useSug(i){
   trMode();SUG=[];$('#sug').hidden=true;$('#sug').innerHTML='';$('#fm').focus();$('#fm').select();
 }
 
+/* ---------- 在明细里直接修改一笔 ---------- */
+function openEdit(id){
+  var e=S.entries.filter(function(x){return x.id===id})[0];if(!e)return;
+  if(e.g){
+    var pair=S.entries.filter(function(x){return x.g===e.g}),o=pair.filter(function(x){return x.t==='out'})[0]||e,i=pair.filter(function(x){return x.t==='in'})[0]||e;
+    dlg({title:'修改转账',fields:[{label:'日期',value:e.d,date:true},{label:'详细',value:e.n||''},{label:'金额（RM）',value:e.m,num:true},{label:'转出账户',value:o.a,opts:acctOpts()},{label:'转入账户',value:i.a,opts:acctOpts()}]},function(v){
+      var m=parseFloat(v[2]);
+      if(!v[0]){dlgAlert('请选日期');return}
+      if(!(m>0)){dlgAlert('金额要大于 0');return}
+      if(v[3]===v[4]){dlgAlert('转出和转入不能是同一个账户');return}
+      var now=Date.now();
+      pair.forEach(function(x){x.d=v[0];x.n=v[1].trim();x.m=Math.round(m*100)/100;x.u=now});
+      o.a=v[3];i.a=v[4];persist();renderAll();toast('已修改转账');
+    });
+    return;
+  }
+  var cats=allCats().filter(function(c){return !isSys(c)||c===e.c});
+  var f=[{label:'日期',value:e.d,date:true},{label:'详细',value:title(e)}];
+  if(!e.l){
+    f.push({label:'分类',value:e.c,opts:cats.map(function(c){return [c,c]})});
+    f.push({label:'收入还是支出',value:e.t,opts:[['out','支出'],['in','收入']]});
+  }
+  f.push({label:'账户',value:e.a,opts:acctOpts()});
+  f.push({label:'金额（RM）',value:e.m,num:true});
+  dlg({title:e.l?'修改借还款记录':'修改这一笔',fields:f},function(v){
+    var k=0,d=v[k++],n=v[k++].trim(),c=e.c,t=e.t;
+    if(!e.l){c=v[k++];t=v[k++]}
+    var a=v[k++],m=parseFloat(v[k++]);
+    if(!d){dlgAlert('请选日期');return}
+    if(!(m>0)){dlgAlert('金额要大于 0');return}
+    e.d=d;e.n=n;e.c=c;e.t=t;e.a=a;e.m=Math.round(m*100)/100;e.u=Date.now();
+    persist();renderAll();if(e.l)renderLoans();toast('已修改：'+(n||c));
+  });
+}
+
 /* ---------- 提醒 ---------- */
 var REMFILL=null;
 function remList(){return S.rem||[]}
@@ -698,13 +809,12 @@ function addLoanEntry(L,kind,m,acct,date){
   var n=kind==='p'?(L.dir==='out'?'借给 '+L.who:'向 '+L.who+' 借入'):(L.dir==='out'?L.who+' 还款':'还款给 '+L.who);
   S.entries.push({id:uid(),ts:now,u:now,d:date,c:'借还款',n:n,t:t,a:acct,m:Math.round(m*100)/100,k:'',l:L.id,lk:kind});
 }
-function mk(v){return HIDE?'••••':fmt(v)}
+function mk(v){return fmt(v)}
 function renderLoans(){
   var el=$('#loanlist');if(!el)return;
   var L=loanList().slice().sort(function(a,b){return loanLast(b)-loanLast(a)}),me=0,you=0,open=[],done=[];
   L.forEach(function(l){var st=loanStat(l);if(st.left>0.004){open.push([l,st]);if(l.dir==='out')me+=st.left;else you+=st.left}else done.push([l,st])});
   $('#owedme').textContent='RM '+mk(me);$('#iowe').textContent='RM '+mk(you);
-  $('#eyebtn2').innerHTML=eyeSVG(!HIDE);
   function card(l,st,isDone){
     var out=l.dir==='out',h='<div class="card" style="'+(isDone?'opacity:.7':'')+'"><div class="lh"><b>'+esc(l.who)+'<span class="ltag">'+(out?'借出':'借入')+'</span></b></div>';
     h+='<div class="lbig" style="color:'+(isDone?'var(--mut)':out?'var(--in)':'var(--out)')+'">'+(isDone?'已还清':(out?'对方还欠你 RM ':'你还欠对方 RM ')+mk(st.left))+'</div>';
@@ -713,7 +823,7 @@ function renderLoans(){
        '<button class="btn sm sec" data-la="'+esc(l.id)+'">'+(out?'再借出':'再借入')+'</button><button class="btn sm sec" data-lv="'+esc(l.id)+'">记录</button><button class="btn sm sec" data-ld="'+esc(l.id)+'">删除</button></div>';
     if(LOANOPEN[l.id]){
       var ev=S.entries.filter(function(e){return e.l===l.id}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:(a.ts-b.ts)});
-      h+='<div class="lev">'+ev.map(function(e){return '<div><span>'+e.d.slice(5)+' · '+esc(e.n)+' · '+esc(e.a)+'</span><span class="'+(e.t==='in'?'in':'out')+'">'+(e.t==='in'?'+':'−')+(HIDE?'••••':amt(e.m))+'</span></div>'}).join('')+'</div>';
+      h+='<div class="lev">'+ev.map(function(e){return '<div><span>'+e.d.slice(5)+' · '+esc(e.n)+' · '+esc(e.a)+'</span><span class="'+(e.t==='in'?'in':'out')+'">'+(e.t==='in'?'+':'−')+amt(e.m)+'</span></div>'}).join('')+'</div>';
     }
     return h+'</div>';
   }
@@ -799,7 +909,7 @@ function renderBudgetBar(){
   }
   var now=new Date(),sp=spendOf(now.getFullYear()+'-'+pad(now.getMonth()+1)),p=sp.out/b.total,left=b.total-sp.out;
   el.hidden=false;
-  el.innerHTML='<div class="ch" style="margin-bottom:8px"><b>本月预算</b><span style="color:'+bcolor(p)+'">'+(HIDE?'••••':(left>=0?'已用 '+Math.round(p*100)+'% · 还剩 RM '+fmt(left):'已超出 RM '+fmt(-left)))+'</span></div>'+
+  el.innerHTML='<div class="ch" style="margin-bottom:8px"><b>本月预算</b><span style="color:'+bcolor(p)+'">'+(left>=0?'已用 '+Math.round(p*100)+'% · 还剩 RM '+fmt(left):'已超出 RM '+fmt(-left))+'</span></div>'+
     '<div class="dbar"><i style="width:'+Math.min(100,Math.max(p>0?2:0,Math.round(p*100)))+'%;background:'+bcolor(p)+'"></i></div>';
 }
 function renderBudgetCard(){
@@ -1096,6 +1206,7 @@ document.addEventListener('click',function(ev){
     if(cv!==SY.cid){SY.cid=cv;tokClient=null;TOK=null;SY.connected=false;SY.fileId=''}saveSY();sync(true);return}
   if(t.closest('#sysync')){if(!SY.cid){syMsg='请先粘贴客户端 ID，再点“连接并同步”';renderSyncUI()}else sync(true);return}
   if(t.closest('#sydis')){disconnect();return}
+  if(t.closest('#autologin')){SY.autoLogin=!SY.autoLogin;saveSY();renderSyncUI();return}
   if(t.closest('#expjson'))return exportJSON();
   if(t.closest('#impjson'))return $('#impfile').click();
   if(t.closest('#impcsvbtn'))return $('#impcsv').click();
@@ -1122,12 +1233,7 @@ document.addEventListener('click',function(ev){
     F={from:ST.mode==='m'?y+'-'+pad(mo)+'-01':y+'-01-01',to:ST.mode==='m'?ymd(new Date(y,mo,0)):y+'-12-31',cat:el.dataset.dc,acct:'',t:'out',q:''};
     $('#lq').value='';tab('list');return;
   }
-  if((el=t.closest('[data-e]'))){
-    var e=S.entries.filter(function(x){return x.id===el.dataset.e})[0];if(!e)return;
-    editId=e.id;tab('add');renderForm();
-    $('#fd').value=e.d;if(isSys(e.c)){var op=document.createElement('option');op.textContent=e.c;$('#fc').appendChild(op)}$('#fc').value=e.c;$('#fn').value=title(e);$('#ft').value=e.t;$('#fa').value=e.a;$('#fm').value=e.m;trMode();
-    $('#save').textContent='保存修改';$('#cancel').hidden=false;$('#msg').textContent='';return;
-  }
+  if((el=t.closest('[data-e]')))return openEdit(el.dataset.e);
   if((el=t.closest('[data-x]'))){
     var me=S.entries.filter(function(x){return x.id===el.dataset.x})[0];
     var gid=me&&me.g;
@@ -1162,7 +1268,7 @@ $('#lq').oninput=function(){F.q=this.value;renderList()};
 
 /* ---------- Google Drive 同步（离线优先） ---------- */
 var SYK='ledger-sync',FILENAME='记账本数据.json',SCOPE='https://www.googleapis.com/auth/drive.file';
-var SY={cid:'',fileId:'',connected:false,dirty:false,last:0,ver:0};
+var SY={cid:'',fileId:'',connected:false,dirty:false,last:0,ver:0,autoLogin:false};
 try{var _sy=JSON.parse(localStorage.getItem(SYK)||'null');if(_sy)for(var _k in _sy)SY[_k]=_sy[_k]}catch(e){}
 function saveSY(){try{localStorage.setItem(SYK,JSON.stringify(SY))}catch(e){}}
 var TOK=null,TOKEXP=0,tokClient=null,tokPending=null,syncing=false,syncTimer=null,syState='',syMsg='';
@@ -1186,6 +1292,7 @@ function renderSyncUI(){
   if(syMsg)line+='\n'+syMsg;
   el.textContent=line;
   var ci=$('#cid');if(ci&&document.activeElement!==ci)ci.value=SY.cid||'';
+  var al=$('#autologin');if(al)al.textContent='自动登录：'+(SY.autoLogin?'开':'关');
 }
 function markDirty(){SY.dirty=true;SY.ver=(SY.ver||0)+1;saveSY();schedSync();refreshChip()}
 function schedSync(){
@@ -1295,13 +1402,19 @@ function localAhead(P){
   for(k in (S.del||{}))if(!d[k])return true;
   return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0)||(S.budgetU||0)>(P.budgetU||0)||loansAhead(P)||remAhead(P);
 }
+function reachable(){
+  return new Promise(function(res){
+    var c=new AbortController(),t=setTimeout(function(){c.abort();res(false)},2000);
+    fetch('https://www.gstatic.com/generate_204',{mode:'no-cors',cache:'no-store',signal:c.signal}).then(function(){clearTimeout(t);res(true)},function(){clearTimeout(t);res(false)});
+  });
+}
 function sync(interactive,retried){
   if(syncing)return Promise.resolve();
   if(!SY.cid){syMsg='请先粘贴 Google 客户端 ID';refreshChip();return Promise.resolve()}
   if(!navigator.onLine){syMsg='现在没有网络，联网后再同步（离线记的账都在手机里）';refreshChip();return Promise.resolve()}
   syncing=true;syMsg='';syState='';refreshChip();
   var ver0;
-  return getToken().then(function(){SY.connected=true;saveSY();return findFile()}).then(function(id){
+  return reachable().then(function(ok){if(!ok)throw new Error('offline');return getToken()}).then(function(){SY.connected=true;saveSY();return findFile()}).then(function(id){
     if(!id){
       ver0=SY.ver;
       return createFile(JSON.stringify(payload())).then(function(nid){SY.fileId=nid});
@@ -1318,6 +1431,7 @@ function sync(interactive,retried){
     var m=(err&&err.message)||'';
     if(/404/.test(m)&&!retried){SY.fileId='';saveSY();syncing=false;return sync(interactive,true)}
     if(m==='auth'){syState='auth';syMsg='需要登录或授权才能同步，点“立即同步”再试。如果没弹出窗口，请允许浏览器弹出窗口。'}
+    else if(m==='offline'){syState='';syMsg='现在连不上网络，联网后再同步（离线记的账都在这台设备里）'}
     else if(m==='gis'){syState='err';syMsg='无法加载 Google 登录（可能没网络）'}
     else if(m==='noid'){syMsg='请先粘贴 Google 客户端 ID'}
     else{syState='err';syMsg='同步失败：'+m}
@@ -1389,11 +1503,11 @@ window.addEventListener('offline',refreshChip);
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='visible'&&SY.connected&&navigator.onLine&&tokOK()&&Date.now()-(SY.last||0)>30000)sync(false);
 });
-var lastAuthTry=0;
+var lastAuthTry=0,authChecking=false;
 document.addEventListener('click',function(){ // 登录过期后，点任何按钮时顺便在后台重新取一次登录凭证
-  if(!SY.connected||!SY.cid||!navigator.onLine||syncing||tokOK())return;
-  var n=Date.now();if(n-lastAuthTry<90000)return;
-  lastAuthTry=n;sync(false);
+  if(!SY.autoLogin||!SY.connected||!SY.cid||!navigator.onLine||syncing||authChecking||tokOK())return;
+  if(Date.now()-lastAuthTry<90000)return;
+  authChecking=true;reachable().then(function(ok){authChecking=false;if(ok){lastAuthTry=Date.now();sync(false)}});
 },true);
 if(navigator.onLine)loadGIS().catch(function(){});
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(function(){});

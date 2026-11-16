@@ -201,6 +201,17 @@ details.more summary{color:var(--acc)}
 .toast{background:rgba(34,43,67,.98);border-radius:14px}
 .dlg{background:rgba(8,11,20,.66);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .dbox{background:var(--card2);border-radius:20px;border-color:rgba(255,255,255,.07)}
+/* 收款二维码 */
+.bal div.hasqr{position:relative;cursor:pointer}
+.bal div.hasqr::after{content:"▦";position:absolute;right:6px;top:0;font-size:12px;color:var(--mut)}
+.qrv{position:fixed;inset:0;z-index:80;background:rgba(8,11,20,.9);display:flex;align-items:center;justify-content:center;padding:16px}
+.qrbox{background:#fff;color:#111;border-radius:22px;padding:16px;width:100%;max-width:min(92vw,420px);text-align:center;max-height:94vh;overflow:auto}
+.qrbox .qrt{font-weight:700;margin-bottom:10px;font-size:16px}
+.qrbox img{display:block;max-width:100%;max-height:62vh;margin:0 auto 12px;border-radius:10px}
+.qrbox .qrb{display:flex;gap:8px;margin-bottom:8px}.qrbox .qrb .btn{flex:1}
+.qrbox>.btn{width:100%}
+.qrbox .btn.sec{color:#256f52;border-color:rgba(37,111,82,.45)}
+.qrbox .btn.sec[data-qrdel]{color:#c0392b;border-color:rgba(192,57,43,.45)}
 /* 设置里的列表：名字一行，说明另起一行；删除类按钮用朱红 */
 .crow .nm small{display:block;margin:2px 0 0;font-size:12px}
 .crow .nm{line-height:1.35}
@@ -325,6 +336,7 @@ details.more summary{color:var(--acc)}
 </main>
 
 <div class="toast" id="toast" hidden></div>
+<input type="file" id="qrfile" accept="image/*" hidden>
 <nav class="tabbar" role="tablist">
 <button role="tab" data-t="add" aria-selected="true"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>记账</button>
 <button role="tab" data-t="list" aria-selected="false"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><polyline points="12 6.5 12 12 15.5 14"/></svg></span>明细</button>
@@ -406,7 +418,7 @@ function renderForm(){
     var v=+(S.open&&S.open[a])||0;
     S.entries.forEach(function(e){if(e.a===a)v+=e.t==='in'?e.m:-e.m});
     totalBal+=v;
-    b+='<div>'+a+'<b class="'+(!HIDE&&v<0?'out':'')+'">'+(HIDE?'••••':money(v))+'</b></div>';
+    b+='<div data-qa="'+esc(a)+'"'+(qrOf(a)?' class="hasqr"':'')+'>'+a+'<b class="'+(!HIDE&&v<0?'out':'')+'">'+(HIDE?'••••':money(v))+'</b></div>';
   });
   $('#top-total-bal').textContent=HIDE?'RM ••••':'RM '+fmt(totalBal);
   $('#eyebtn').innerHTML=eyeSVG(!HIDE);$('#eyebtn').setAttribute('aria-pressed',HIDE?'false':'true');
@@ -554,7 +566,7 @@ function renderSettings(){
   allAccts().forEach(function(a){
     var n=accCount(a),op=+(S.open&&S.open[a])||0;
     ah+='<div class="crow"><div class="ic" style="background:#54a0ff2e">💳</div><div class="nm">'+esc(a)+'<small>'+n+' 笔'+(op?' · 期初 RM '+fmt(op):'')+'</small></div>'+
-      '<button class="btn sm sec" data-ae="'+esc(a)+'">编辑</button><button class="btn sm sec" data-ad="'+esc(a)+'">删除</button></div>';
+      '<button class="btn sm sec" data-qr="'+esc(a)+'">'+(qrOf(a)?'收款码 ✓':'收款码')+'</button><button class="btn sm sec" data-ae="'+esc(a)+'">编辑</button><button class="btn sm sec" data-ad="'+esc(a)+'">删除</button></div>';
   });
   $('#acclist').innerHTML=ah;
   renderQuickList();renderBudgetCard();renderRemList();renderTrash();
@@ -635,6 +647,43 @@ function useSug(i){
   if(!$('#fm').value)$('#fm').value=x.m;
   trMode();SUG=[];$('#sug').hidden=true;$('#sug').innerHTML='';$('#fm').focus();$('#fm').select();
 }
+
+/* ---------- 收款二维码（只存在你自己的设备和 Google Drive 里，不写进网页代码） ---------- */
+var QRTARGET=null,QRWL=null;
+function qrOf(a){var q=S.qr&&S.qr[a];return q&&q.d?q.d:''}
+function closeQR(){var w=$('#qrv');if(w)w.remove();if(QRWL){try{QRWL.release()}catch(e){}QRWL=null}}
+function showQR(a,manage){
+  var d=qrOf(a);if(!d)return;
+  closeQR();
+  var w=document.createElement('div');w.id='qrv';w.className='qrv';
+  w.innerHTML='<div class="qrbox"><div class="qrt">'+esc(a)+' 收款码</div><img alt="" id="qrimg">'+
+    (manage?'<div class="qrb"><button class="btn sec" type="button" data-qrchange>更换图片</button><button class="btn sec" type="button" data-qrdel>删除</button></div>':'')+
+    '<button class="btn" type="button" data-qrclose>关闭</button></div>';
+  document.body.appendChild(w);$('#qrimg').src=d;
+  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(l){QRWL=l}).catch(function(){})}catch(e){}
+  w.addEventListener('click',function(e){
+    if(e.target===w||e.target.closest('[data-qrclose]')){closeQR();return}
+    if(e.target.closest('[data-qrchange]')){closeQR();pickQR(a);return}
+    if(e.target.closest('[data-qrdel]')){closeQR();dlgConfirm('确定删除「'+a+'」的收款码？',function(){
+      S.qr=S.qr||{};S.qr[a]={d:'',u:Date.now()};persist();renderAll();renderSettings();toast('已删除 '+a+' 的收款码')})}
+  });
+}
+function pickQR(a){QRTARGET=a;var f=$('#qrfile');f.value='';f.click()}
+function qrButton(a){if(qrOf(a))showQR(a,true);else pickQR(a)}
+$('#qrfile').addEventListener('change',function(){
+  var file=this.files[0],a=QRTARGET;if(!file||!a)return;
+  var img=new Image(),url=URL.createObjectURL(file);
+  img.onload=function(){
+    var max=800,r=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');
+    c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);
+    var g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(url);
+    S.qr=S.qr||{};S.qr[a]={d:c.toDataURL('image/jpeg',0.9),u:Date.now()};
+    persist();renderAll();renderSettings();toast('已保存 '+a+' 的收款码');
+  };
+  img.onerror=function(){URL.revokeObjectURL(url);dlgAlert('这张图片打不开，换一张试试')};
+  img.src=url;
+});
 
 /* ---------- 在明细里直接修改一笔 ---------- */
 function openEdit(id){
@@ -1032,6 +1081,7 @@ function editAcc(old){
       S.entries.forEach(function(e){if(e.a===old){e.a=n;e.u=Date.now()}});
       quickList().forEach(function(p){if(p.a===old)p.a=n});S.quickU=Date.now();
       if(S.open&&old in S.open)delete S.open[old];
+      if(S.qr&&S.qr[old]){S.qr[n]={d:S.qr[old].d,u:Date.now()};S.qr[old]={d:'',u:Date.now()}}
     }else S.accts=allAccts();
     S.open=S.open||{};S.open[n]=Math.round(o*100)/100;accTouch();
     persist();renderAll();renderSettings();
@@ -1043,6 +1093,7 @@ function delAcc(a){
   if(allAccts().length<=1){dlgAlert('至少要保留一个账户');return}
   dlgConfirm('确定删除账户「'+a+'」？',function(){
     S.accts=allAccts().filter(function(x){return x!==a});if(S.open)delete S.open[a];accTouch();
+    if(S.qr&&S.qr[a])S.qr[a]={d:'',u:Date.now()};
     S.quick=quickList().filter(function(p){return p.a!==a});S.quickU=Date.now();
     persist();renderAll();renderSettings();
   });
@@ -1198,6 +1249,8 @@ document.addEventListener('click',function(ev){
   if((el=t.closest('[data-tr]')))return restoreTrash(el.dataset.tr);
   if(t.closest('#trashclr'))return dlgConfirm('清空“最近删除”？清空后就不能恢复了。',function(){S.trash=[];persist();renderSettings()});
   if((el=t.closest('[data-bs]')))return setBudget(el.dataset.bs);
+  if((el=t.closest('[data-qr]')))return qrButton(el.dataset.qr);
+  if((el=t.closest('[data-qa]')))return showQR(el.dataset.qa,false);
   if((el=t.closest('[data-ae]')))return editAcc(el.dataset.ae);
   if((el=t.closest('[data-ad]')))return delAcc(el.dataset.ad);
   if(t.closest('#addacc'))return addAcc();
@@ -1349,7 +1402,7 @@ function updateFile(id,body){
   return dfetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',
     {method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:body});
 }
-function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,quick:quickList(),quickU:S.quickU||0,budget:bud(),budgetU:S.budgetU||0,loans:loanList(),loanDel:S.loanDel||{},rem:remList(),remDel:S.remDel||{},remDone:S.remDone||{},entries:S.entries,del:S.del||{}}}
+function payload(){return {v:1,saved:Date.now(),cats:S.cats,cs:S.cs||{},catsU:S.catsU||0,accts:allAccts(),open:S.open||{},accU:S.accU||0,wm:S.wm,wmU:S.wmU||0,qr:S.qr||{},quick:quickList(),quickU:S.quickU||0,budget:bud(),budgetU:S.budgetU||0,loans:loanList(),loanDel:S.loanDel||{},rem:remList(),remDel:S.remDel||{},remDone:S.remDone||{},entries:S.entries,del:S.del||{}}}
 function mergeIn(P){
   if(!P||!P.entries)return;
   P.entries.forEach(function(e){if(e.c==='未知')e.c='错误'});
@@ -1368,6 +1421,7 @@ function mergeIn(P){
   if(P.wmU&&P.wmU>(S.wmU||0)){S.wm=P.wm||'';S.wmU=P.wmU}
   if(P.quick&&(P.quickU||0)>(S.quickU||0)){S.quick=P.quick;S.quickU=P.quickU}
   if(P.budget&&(P.budgetU||0)>(S.budgetU||0)){S.budget=P.budget;S.budgetU=P.budgetU}
+  if(P.qr){S.qr=S.qr||{};for(k in P.qr){var lq=S.qr[k];if(!lq||(P.qr[k].u||0)>(lq.u||0))S.qr[k]=P.qr[k]}}
   var ld=Object.assign({},S.loanDel||{}),lm={},lo=[];
   for(k in (P.loanDel||{}))ld[k]=Math.max(ld[k]||0,P.loanDel[k]);
   loanList().forEach(function(l){lm[l.id]=l;lo.push(l.id)});
@@ -1380,6 +1434,7 @@ function mergeIn(P){
   (P.rem||[]).forEach(function(l){var x=rmap[l.id];if(!x){rmap[l.id]=l;ro.push(l.id)}else if((l.u||0)>(x.u||0))rmap[l.id]=l});
   S.rem=ro.filter(function(id){return !rd[id]}).map(function(id){return rmap[id]});S.remDel=rd;S.remDone=dn;
 }
+function qrAhead(P){var k,r=P.qr||{};for(k in (S.qr||{}))if(!r[k]||(S.qr[k].u||0)>(r[k].u||0))return true;return false}
 function remAhead(P){
   var m={},d=P.remDel||{},dn=P.remDone||{},i,k,L=remList();
   (P.rem||[]).forEach(function(l){m[l.id]=l});
@@ -1400,7 +1455,7 @@ function localAhead(P){
   (P.entries||[]).forEach(function(e){m[e.id]=e});
   for(i=0;i<S.entries.length;i++){var e=S.entries[i],r=m[e.id];if(!r||(e.u||e.ts)>(r.u||r.ts))return true}
   for(k in (S.del||{}))if(!d[k])return true;
-  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0)||(S.budgetU||0)>(P.budgetU||0)||loansAhead(P)||remAhead(P);
+  return (S.catsU||0)>(P.catsU||0)||(S.accU||0)>(P.accU||0)||(S.wmU||0)>(P.wmU||0)||(S.quickU||0)>(P.quickU||0)||(S.budgetU||0)>(P.budgetU||0)||loansAhead(P)||remAhead(P)||qrAhead(P);
 }
 function reachable(){
   return new Promise(function(res){
